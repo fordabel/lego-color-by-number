@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Color by Number Pipeline</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f5f4f0;color:#1a1a1a;min-height:100vh}
+.app{max-width:1100px;margin:0 auto;padding:24px 16px;display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start}
+.panel{background:#fff;border:0.5px solid rgba(0,0,0,0.12);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.panel-title{font-size:13px;font-weight:600;letter-spacing:0.05em;color:#666;text-transform:uppercase}
+.field{display:flex;flex-direction:column;gap:6px}
+label{font-size:13px;color:#444;font-weight:500}
+input[type=range]{width:100%;accent-color:#5a4fd8}
+select,input[type=number]{width:100%;padding:7px 10px;border:0.5px solid rgba(0,0,0,0.2);border-radius:6px;font-size:13px;background:#fff;color:#1a1a1a}
+.upload-zone{border:1.5px dashed rgba(0,0,0,0.2);border-radius:8px;padding:28px 16px;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s;position:relative}
+.upload-zone:hover,.upload-zone.drag{border-color:#5a4fd8;background:#f3f2ff}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-zone p{font-size:13px;color:#888;margin-top:4px}
+.upload-zone strong{font-size:14px;color:#444}
+.thumb{width:100%;max-height:140px;object-fit:contain;border-radius:6px;margin-top:8px;display:none}
+.color-list{display:flex;flex-wrap:wrap;gap:6px;min-height:40px;padding:8px;border:0.5px solid rgba(0,0,0,0.12);border-radius:8px;background:#fafaf8}
+.chip{width:34px;height:34px;border-radius:6px;border:0.5px solid rgba(0,0,0,0.15);cursor:pointer;position:relative;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.chip .del{display:none;position:absolute;inset:0;background:rgba(0,0,0,0.55);border-radius:6px;color:#fff;font-size:15px;align-items:center;justify-content:center}
+.chip:hover .del{display:flex}
+.add-color-row{display:flex;gap:8px;align-items:center}
+input[type=color]{width:40px;height:32px;padding:2px;border:0.5px solid rgba(0,0,0,0.2);border-radius:6px;cursor:pointer;background:#fff}
+.hex-in{flex:1;padding:7px 10px;border:0.5px solid rgba(0,0,0,0.2);border-radius:6px;font-size:13px;font-family:monospace}
+.btn{padding:8px 16px;border:0.5px solid rgba(0,0,0,0.2);border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;background:#fff;color:#1a1a1a;transition:background 0.15s,transform 0.1s}
+.btn:hover{background:#f0f0f0}
+.btn:active{transform:scale(0.97)}
+.btn-primary{background:#5a4fd8;color:#fff;border-color:#5a4fd8}
+.btn-primary:hover{background:#4a3fc8}
+.btn-sm{padding:5px 12px;font-size:12px}
+.presets{display:flex;flex-wrap:wrap;gap:5px}
+.preset-btn{padding:4px 10px;font-size:11px;border:0.5px solid rgba(0,0,0,0.15);border-radius:5px;cursor:pointer;background:#fff;color:#555;transition:background 0.15s}
+.preset-btn:hover{background:#f0effe;border-color:#5a4fd8;color:#5a4fd8}
+.output-panel{background:#fff;border:0.5px solid rgba(0,0,0,0.12);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.output-header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mode-btns{display:flex;gap:6px}
+.mode-btn{padding:6px 14px;font-size:12px;border:0.5px solid rgba(0,0,0,0.2);border-radius:6px;cursor:pointer;background:#fff;color:#555;transition:all 0.15s;font-weight:500}
+.mode-btn.active{background:#5a4fd8;color:#fff;border-color:#5a4fd8}
+.grid-scroll{overflow:auto;max-width:100%;max-height:70vh;border:0.5px solid rgba(0,0,0,0.1);border-radius:8px}
+#gridCanvas{display:block;image-rendering:pixelated}
+.legend{display:flex;flex-wrap:wrap;gap:6px}
+.legend-chip{display:flex;align-items:center;gap:5px;font-size:11px;background:#f5f4f0;border-radius:5px;padding:4px 8px;border:0.5px solid rgba(0,0,0,0.08)}
+.legend-swatch{width:16px;height:16px;border-radius:3px;border:0.5px solid rgba(0,0,0,0.12);flex-shrink:0}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;color:#aaa;gap:8px}
+.empty-state svg{opacity:0.3}
+.empty-state p{font-size:14px}
+.row-info{display:flex;gap:12px;font-size:12px;color:#888}
+.hint{font-size:11px;color:#999;margin-top:2px}
+.section-divider{border:none;border-top:0.5px solid rgba(0,0,0,0.08);margin:2px 0}
+.tooltip{position:fixed;background:#1a1a1a;color:#fff;font-size:11px;padding:4px 8px;border-radius:4px;pointer-events:none;display:none;z-index:999;white-space:nowrap}
+.crop-modal{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.crop-modal.active{display:flex}
+.crop-modal-content{background:#fff;border-radius:12px;padding:20px;max-width:92vw;max-height:92vh;display:flex;flex-direction:column;gap:12px;align-items:center}
+.crop-modal-content h3{font-size:15px;font-weight:600;color:#1a1a1a;align-self:flex-start}
+.crop-modal-content .hint{align-self:flex-start;margin-top:-6px}
+.crop-stage{position:relative;display:inline-block;background:#1a1a1a;border-radius:8px;overflow:hidden;line-height:0;user-select:none;touch-action:none}
+.crop-stage canvas{display:block;max-width:78vw;max-height:62vh}
+.crop-box{position:absolute;box-shadow:0 0 0 9999px rgba(0,0,0,0.55),inset 0 0 0 2px #fff;cursor:move}
+.crop-grid{position:absolute;inset:0;pointer-events:none;background:linear-gradient(to right,transparent 33.33%,rgba(255,255,255,0.3) 33.33%,rgba(255,255,255,0.3) 33.66%,transparent 33.66%,transparent 66.66%,rgba(255,255,255,0.3) 66.66%,rgba(255,255,255,0.3) 67%,transparent 67%),linear-gradient(to bottom,transparent 33.33%,rgba(255,255,255,0.3) 33.33%,rgba(255,255,255,0.3) 33.66%,transparent 33.66%,transparent 66.66%,rgba(255,255,255,0.3) 66.66%,rgba(255,255,255,0.3) 67%,transparent 67%)}
+.crop-handle{position:absolute;width:12px;height:12px;background:#fff;border:1px solid #1a1a1a;border-radius:2px}
+.crop-handle.nw{top:0;left:0;cursor:nwse-resize}
+.crop-handle.ne{top:0;right:0;cursor:nesw-resize}
+.crop-handle.sw{bottom:0;left:0;cursor:nesw-resize}
+.crop-handle.se{bottom:0;right:0;cursor:nwse-resize}
+.crop-actions{display:flex;gap:10px;justify-content:flex-end;width:100%;margin-top:4px}
+.recrop-btn{padding:5px 10px;font-size:11px;border:0.5px solid rgba(0,0,0,0.2);border-radius:5px;cursor:pointer;background:#fff;color:#555;margin-top:6px;align-self:flex-start}
+.recrop-btn:hover{background:#f0effe;border-color:#5a4fd8;color:#5a4fd8}
+@media(max-width:700px){.app{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="panel">
+  <div class="panel-title">Setup</div>
+
+  <div class="field">
+    <label>Image</label>
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" accept="image/*" id="fileInput">
+      <strong>Drop image or click to upload</strong>
+      <p>PNG, JPG, GIF, WEBP supported</p>
+    </div>
+    <img id="thumb" class="thumb" alt="preview">
+    <button class="recrop-btn" id="recropBtn" onclick="reopenCrop()" style="display:none">Re-crop image</button>
+  </div>
+
+  <hr class="section-divider">
+
+  <div class="field">
+    <label>Grid size</label>
+    <select id="gridSize">
+      <option value="25">25 × 25</option>
+      <option value="50" selected>50 × 50</option>
+      <option value="75">75 × 75</option>
+      <option value="100">100 × 100</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Cell display size (px)</label>
+    <div style="display:flex;align-items:center;gap:10px">
+      <input type="range" id="cellSize" min="5" max="24" value="11" style="flex:1">
+      <span id="cellSizeOut" style="font-size:13px;min-width:26px;color:#555">11px</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Background threshold</label>
+    <div style="display:flex;align-items:center;gap:10px">
+      <input type="range" id="bgThresh" min="0" max="80" value="30">
+      <span id="bgThreshOut" style="font-size:13px;min-width:26px;color:#555">30</span>
+    </div>
+    <span class="hint">Pixels this close to white are treated as background</span>
+  </div>
+
+  <div class="field">
+    <label>Skin tone boost</label>
+    <div style="display:flex;align-items:center;gap:10px">
+      <input type="range" id="skinPush" min="0" max="100" value="40">
+      <span id="skinPushOut" style="font-size:13px;min-width:26px;color:#555">40</span>
+    </div>
+    <span class="hint">Warms &amp; saturates pixels before matching — fixes faces graying out in cool-toned photos</span>
+  </div>
+
+  <hr class="section-divider">
+
+  <div class="field">
+    <label>Color palette</label>
+    <div class="presets">
+      <span style="font-size:11px;color:#999;align-self:center">Presets:</span>
+      <button class="preset-btn" onclick="loadPreset('lego20')">LEGO 20</button>
+      <button class="preset-btn" onclick="loadPreset('standard')">Standard 16</button>
+      <button class="preset-btn" onclick="loadPreset('crayola')">Crayola 16</button>
+      <button class="preset-btn" onclick="loadPreset('warm')">Warm tones</button>
+      <button class="preset-btn" onclick="loadPreset('cool')">Cool tones</button>
+      <button class="preset-btn" onclick="loadPreset('earth')">Earth tones</button>
+      <button class="preset-btn" onclick="loadPreset('pastel')">Pastels</button>
+      <button class="preset-btn" onclick="loadPreset('mono')">Monochrome</button>
+      <button class="preset-btn" onclick="loadPreset('starwars')">Star Wars</button>
+    </div>
+    <div class="color-list" id="colorList"></div>
+    <div class="add-color-row">
+      <input type="color" id="colorPicker" value="#ff0000">
+      <input type="text" class="hex-in" id="hexInput" placeholder="#FF0000" maxlength="7">
+      <button class="btn btn-sm" onclick="addColor()">Add</button>
+    </div>
+    <div class="row-info">
+      <span id="colorCount">0 colors</span>
+      <button class="btn btn-sm" style="padding:2px 8px;font-size:11px" onclick="clearColors()">Clear all</button>
+    </div>
+  </div>
+
+  <hr class="section-divider">
+
+  <button class="btn btn-primary" id="processBtn" onclick="process()" style="width:100%;padding:10px">
+    Generate color by number
+  </button>
+  <div id="statusMsg" style="font-size:12px;color:#888;text-align:center;min-height:16px"></div>
+</div>
+
+<div class="output-panel">
+  <div class="output-header">
+    <span style="font-size:14px;font-weight:500;flex:1" id="outputTitle">Output</span>
+    <div class="mode-btns">
+      <button class="mode-btn active" id="mBtn-numbers" onclick="setMode('numbers')">Numbers</button>
+      <button class="mode-btn" id="mBtn-blank" onclick="setMode('blank')">Blank</button>
+      <button class="mode-btn" id="mBtn-solution" onclick="setMode('solution')">Solution</button>
+    </div>
+    <button class="btn btn-sm" id="downloadBtn" onclick="downloadCanvas()" style="display:none">Save PNG</button>
+  </div>
+
+  <div class="grid-scroll" id="gridScroll">
+    <div class="empty-state" id="emptyState">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9M15 21V9M3 15h18"/>
+      </svg>
+      <p>Upload an image and set your palette to begin</p>
+    </div>
+    <canvas id="gridCanvas" style="display:none"></canvas>
+  </div>
+
+  <div class="legend" id="legend"></div>
+</div>
+
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<div class="crop-modal" id="cropModal">
+  <div class="crop-modal-content">
+    <h3>Crop image to square</h3>
+    <p class="hint">Drag to move the selection • Drag corners to resize</p>
+    <div class="crop-stage" id="cropStage">
+      <canvas id="cropCanvas"></canvas>
+      <div class="crop-box" id="cropBox">
+        <div class="crop-grid"></div>
+        <div class="crop-handle nw"></div>
+        <div class="crop-handle ne"></div>
+        <div class="crop-handle sw"></div>
+        <div class="crop-handle se"></div>
+      </div>
+    </div>
+    <div class="crop-actions">
+      <button class="btn" onclick="cancelCrop()">Skip crop</button>
+      <button class="btn btn-primary" onclick="applyCrop()">Apply crop</button>
+    </div>
+  </div>
+</div>
+
+<canvas id="offscreen" style="display:none"></canvas>
+
+<script>
+const PRESETS = {
+  lego20:  ['#FFFFFF','#05131D','#C91A09','#0055BF','#F2CD37','#A0A5A9','#6C6E68','#582A12','#E4CD9E','#237841','#BBE90B','#FE8A18','#720E0F','#184632','#5A93DB','#958A73','#5A7E8B','#9FC3E9','#FC97AC','#583927'],
+  standard:['#FFFFFF','#C0C0C0','#808080','#000000','#8B4513','#8B0000','#FF0000','#FF8C00','#FFD700','#228B22','#00FF00','#87CEEB','#00CED1','#4169E1','#8A2BE2','#FF1493'],
+  crayola: ['#EE4B2B','#FF7F00','#FFD700','#00A550','#0047AB','#8B008B','#FF69B4','#A52A2A','#000000','#FFFFFF','#808080','#C0C0C0','#8B4513','#FF8C00','#40E0D0','#98FB98'],
+  warm:    ['#FF2400','#FF6600','#FF8C00','#FFA500','#FFD700','#FFEC8B','#FFDAB9','#E9967A','#CD5C5C','#B22222','#8B0000','#FF69B4','#FF1493','#C71585','#4B0000','#FFFFFF'],
+  cool:    ['#000080','#0000CD','#4169E1','#1E90FF','#00BFFF','#87CEEB','#B0E0E6','#00CED1','#008B8B','#006400','#228B22','#32CD32','#98FB98','#8A2BE2','#9400D3','#FFFFFF'],
+  earth:   ['#8B4513','#A0522D','#CD853F','#D2691E','#DEB887','#F4A460','#FAEBD7','#556B2F','#6B8E23','#808000','#8FBC8F','#2E8B57','#696969','#808080','#A9A9A9','#FFFFFF'],
+  pastel:  ['#FFB3BA','#FFDFBA','#FFFFBA','#BAFFC9','#BAE1FF','#D4BAFF','#FFB3E6','#C9FFE5','#C9D6FF','#FFD9B3','#B3FFD9','#D9B3FF','#FFC8B3','#B3FFFD','#F7C8E0','#FFFFFF'],
+  mono:    ['#FFFFFF','#E8E8E8','#D0D0D0','#B8B8B8','#A0A0A0','#888888','#707070','#585858','#404040','#2C2C2C','#181818','#000000'],
+  starwars:['#1a1a1a','#4a4a4a','#888888','#c8c8c8','#FFFFFF','#8B0000','#CC0000','#FF4500','#FF8C00','#C09000','#1a3a6a','#2E75B6','#87CEEB','#2d5a27','#4CAF50','#B5651D']
+};
+
+let palette = [];
+let grid = null;
+let colors = null;
+let currentMode = 'numbers';
+let cellSize = 11;
+let imgData = null;
+let originalImg = null;
+
+const colorPicker = document.getElementById('colorPicker');
+const hexInput = document.getElementById('hexInput');
+const cellSizeSlider = document.getElementById('cellSize');
+const bgThreshSlider = document.getElementById('bgThresh');
+
+colorPicker.addEventListener('input', e => { hexInput.value = e.target.value.toUpperCase(); });
+hexInput.addEventListener('input', e => {
+  const v = e.target.value.trim();
+  if(/^#[0-9A-Fa-f]{6}$/.test(v)) colorPicker.value = v;
+});
+hexInput.addEventListener('keydown', e => { if(e.key==='Enter') addColor(); });
+
+cellSizeSlider.addEventListener('input', e => {
+  cellSize = +e.target.value;
+  document.getElementById('cellSizeOut').textContent = cellSize + 'px';
+  if(grid) renderGrid();
+});
+
+bgThreshSlider.addEventListener('input', e => {
+  document.getElementById('bgThreshOut').textContent = e.target.value;
+});
+
+const skinPushSlider = document.getElementById('skinPush');
+skinPushSlider.addEventListener('input', e => {
+  document.getElementById('skinPushOut').textContent = e.target.value;
+});
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if(!f) return;
+  loadImageFile(f);
+});
+
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if(!f || !f.type.startsWith('image/')) return;
+  loadImageFile(f);
+});
+
+function loadImageFile(f) {
+  const url = URL.createObjectURL(f);
+  const img = new Image();
+  img.onload = () => {
+    originalImg = img;
+    imgData = img;
+    showThumb(url);
+    openCropModal(img);
+  };
+  img.src = url;
+}
+
+function showThumb(url) {
+  const t = document.getElementById('thumb');
+  t.src = url; t.style.display = 'block';
+  document.querySelector('.upload-zone strong').textContent = 'Image loaded';
+  document.getElementById('recropBtn').style.display = '';
+}
+
+function hexToRgb(hex) {
+  const h = hex.replace('#','');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+
+function rgbToHex(r,g,b) {
+  return '#' + [r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('').toUpperCase();
+}
+
+function colorDist(a, b) {
+  const dr = a[0]-b[0], dg = a[1]-b[1], db = a[2]-b[2];
+  return dr*dr + dg*dg + db*db;
+}
+
+// Perceptual color matching: convert sRGB → CIE Lab and use Delta E.
+// This matches how humans actually see color, so skin tones map to tans/browns
+// instead of muted greens/grays as they do under naive RGB distance.
+function srgbToLinear(c) {
+  c = c / 255;
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+function rgbToLab(r, g, b) {
+  const lr = srgbToLinear(r);
+  const lg = srgbToLinear(g);
+  const lb = srgbToLinear(b);
+  // sRGB → XYZ (D65)
+  let x = lr * 0.4124564 + lg * 0.3575761 + lb * 0.1804375;
+  let y = lr * 0.2126729 + lg * 0.7151522 + lb * 0.0721750;
+  let z = lr * 0.0193339 + lg * 0.1191920 + lb * 0.9503041;
+  // Normalize by D65 reference white
+  x /= 0.95047; y /= 1.00000; z /= 1.08883;
+  const f = (t) => t > 0.008856 ? Math.cbrt(t) : (7.787 * t + 16/116);
+  const fx = f(x), fy = f(y), fz = f(z);
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+}
+function labDist(a, b) {
+  const dL = a[0]-b[0], da = a[1]-b[1], db = a[2]-b[2];
+  return dL*dL + da*da + db*db;
+}
+
+// High-quality multi-pass downscale: halves dimensions iteratively until close
+// to target, then performs the final draw. This preserves much more fine detail
+// (mouths, eyes, edges) than a single big downscale step.
+function downscaleHQ(img, targetW, targetH) {
+  let curSrc = img;
+  let curW = img.naturalWidth || img.width;
+  let curH = img.naturalHeight || img.height;
+  while (curW > targetW * 2 && curH > targetH * 2) {
+    const newW = Math.floor(curW / 2);
+    const newH = Math.floor(curH / 2);
+    const tmp = document.createElement('canvas');
+    tmp.width = newW;
+    tmp.height = newH;
+    const tctx = tmp.getContext('2d');
+    tctx.imageSmoothingEnabled = true;
+    tctx.imageSmoothingQuality = 'high';
+    tctx.drawImage(curSrc, 0, 0, newW, newH);
+    curSrc = tmp;
+    curW = newW;
+    curH = newH;
+  }
+  const out = document.createElement('canvas');
+  out.width = targetW;
+  out.height = targetH;
+  const ctx = out.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(curSrc, 0, 0, targetW, targetH);
+  return out;
+}
+
+// Mild unsharp mask via 3x3 kernel. Kernel sums to 1 so brightness is preserved.
+// Recovers edge detail that would otherwise be smoothed away by the downscale.
+function sharpenImageData(imageData, amount) {
+  const w = imageData.width, h = imageData.height;
+  const src = new Uint8ClampedArray(imageData.data);
+  const dst = imageData.data;
+  const c = 1 + 4 * amount;
+  const e = -amount;
+  for (let y = 0; y < h; y++) {
+    const ym1 = Math.max(0, y - 1);
+    const yp1 = Math.min(h - 1, y + 1);
+    for (let x = 0; x < w; x++) {
+      const xm1 = Math.max(0, x - 1);
+      const xp1 = Math.min(w - 1, x + 1);
+      const i = (y * w + x) * 4;
+      for (let ch = 0; ch < 3; ch++) {
+        const v = c * src[i + ch]
+                + e * (src[(ym1 * w + x) * 4 + ch]
+                     + src[(yp1 * w + x) * 4 + ch]
+                     + src[(y * w + xm1) * 4 + ch]
+                     + src[(y * w + xp1) * 4 + ch]);
+        dst[i + ch] = v < 0 ? 0 : v > 255 ? 255 : v;
+      }
+    }
+  }
+}
+
+function addColor(hex) {
+  const h = hex || hexInput.value.trim() || colorPicker.value;
+  const clean = h.startsWith('#') ? h : '#'+h;
+  if(!/^#[0-9A-Fa-f]{6}$/.test(clean)) return;
+  const upper = clean.toUpperCase();
+  if(palette.includes(upper)) return;
+  palette.push(upper);
+  renderPalette();
+  hexInput.value = '';
+}
+
+function removeColor(i) {
+  palette.splice(i, 1);
+  renderPalette();
+}
+
+function clearColors() { palette = []; renderPalette(); }
+
+function loadPreset(name) {
+  palette = [...PRESETS[name]];
+  renderPalette();
+}
+
+function renderPalette() {
+  const list = document.getElementById('colorList');
+  list.innerHTML = '';
+  palette.forEach((hex, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.style.background = hex;
+    chip.title = hex;
+    chip.innerHTML = `<div class="del" onclick="removeColor(${i})">×</div>`;
+    list.appendChild(chip);
+  });
+  document.getElementById('colorCount').textContent = palette.length + ' colors';
+}
+
+function process() {
+  if(!imgData) { setStatus('Please upload an image first.'); return; }
+  if(palette.length < 2) { setStatus('Add at least 2 colors to the palette.'); return; }
+
+  setStatus('Processing…');
+  setTimeout(() => {
+    try {
+      const gs = +document.getElementById('gridSize').value;
+      const bgThresh = +document.getElementById('bgThresh').value;
+
+      // Multi-pass downscale + mild unsharp mask. Together these preserve fine
+      // features (mouths, eyes) far better than a single browser-default downscale.
+      const off = downscaleHQ(imgData, gs, gs);
+      const ctx = off.getContext('2d');
+      const imageDataObj = ctx.getImageData(0, 0, gs, gs);
+      sharpenImageData(imageDataObj, 0.45);
+      const raw = imageDataObj.data;
+
+      const palRgb = palette.map(hexToRgb);
+      const palLab = palRgb.map(rgb => rgbToLab(rgb[0], rgb[1], rgb[2]));
+      // Pre-compute palette chroma so we can penalize neutral palette colors when
+      // the input pixel has noticeable color cast (rescues sea/sky from snapping to gray).
+      const palChroma = palLab.map(lab => Math.sqrt(lab[1]*lab[1] + lab[2]*lab[2]));
+
+      // Skin tone boost: shift WARM-leaning pixels further toward warm (a+ = red, b+ = yellow)
+      // and scale chroma away from neutral for ALL pixels. The conditional warm shift means
+      // cool things (sky/sea) keep their cool cast — only warm things get warmer.
+      const skinPush = +document.getElementById('skinPush').value / 100;
+      const warmShift = skinPush * 7;       // 0..7 — only applied to a/b > 0
+      const chromaScale = 1 + skinPush * 1.0; // 1.0..2.0 — applied to all
+
+      // Background snap: only treat pixel as background if it's BOTH very pale AND nearly
+      // neutral. Prevents pale-blue skies from being snapped to white when bg threshold > 0.
+      const bgL = 100 - bgThresh * 0.4;     // L cutoff: at threshold 30, L > 88 → bg-eligible
+      const bgChromaMax = 5;                // chroma must also be < 5
+
+      grid = new Array(gs).fill(null).map(() => new Array(gs).fill(0));
+      colors = palette.slice();
+
+      for(let r=0; r<gs; r++) {
+        for(let c=0; c<gs; c++) {
+          const idx = (r*gs+c)*4;
+          const a = raw[idx+3];
+          if(a < 40) { grid[r][c] = 0; continue; }
+          const pr = raw[idx], pg = raw[idx+1], pb = raw[idx+2];
+          const lab = rgbToLab(pr, pg, pb);
+          const rawChroma = Math.sqrt(lab[1]*lab[1] + lab[2]*lab[2]);
+          if(bgThresh > 0 && lab[0] > bgL && rawChroma < bgChromaMax) {
+            grid[r][c] = 0; continue;
+          }
+          if(skinPush > 0) {
+            if(lab[1] > 0) lab[1] += warmShift;
+            if(lab[2] > 0) lab[2] += warmShift;
+            lab[1] *= chromaScale;
+            lab[2] *= chromaScale;
+          }
+          const pxChroma = Math.sqrt(lab[1]*lab[1] + lab[2]*lab[2]);
+          let best = 0, bestD = Infinity;
+          for(let p=0; p<palLab.length; p++) {
+            let d = labDist(lab, palLab[p]);
+            // Chroma-aware penalty: if the pixel has clear color, penalize matching it
+            // to a near-neutral palette color. This is what stops sea/sky → gray.
+            if(pxChroma > 5 && palChroma[p] < 4) {
+              d *= 1 + Math.min((pxChroma - palChroma[p]) / 4, 2);
+            }
+            if(d < bestD) { bestD = d; best = p; }
+          }
+          grid[r][c] = best + 1;
+        }
+      }
+
+      cellSize = +document.getElementById('cellSize').value;
+      renderGrid();
+      buildLegend();
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('gridCanvas').style.display = 'block';
+      document.getElementById('downloadBtn').style.display = '';
+      document.getElementById('outputTitle').textContent = `${gs} × ${gs} grid — ${palette.length} colors`;
+      setStatus('Done!');
+      setTimeout(()=>setStatus(''),2000);
+    } catch(e) { setStatus('Error: ' + e.message); }
+  }, 20);
+}
+
+function renderGrid() {
+  if(!grid) return;
+  const gs = grid.length;
+  const canvas = document.getElementById('gridCanvas');
+  const cs = cellSize;
+  canvas.width = gs * cs;
+  canvas.height = gs * cs;
+  const ctx = canvas.getContext('2d');
+
+  const palRgb = colors.map(hexToRgb);
+  const mode = currentMode;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  for(let r=0; r<gs; r++) {
+    for(let c=0; c<gs; c++) {
+      const n = grid[r][c];
+      const x = c*cs, y = r*cs;
+
+      if(n === 0) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x, y, cs, cs);
+        if(cs > 4) {
+          ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+          ctx.strokeRect(x+0.5, y+0.5, cs-1, cs-1);
+        }
+        continue;
+      }
+
+      const rgb = palRgb[n-1];
+      const hex = colors[n-1];
+
+      if(mode === 'solution') {
+        ctx.fillStyle = hex;
+      } else {
+        ctx.fillStyle = '#ffffff';
+      }
+      ctx.fillRect(x, y, cs, cs);
+
+      if(cs > 4) {
+        ctx.strokeStyle = mode==='solution' ? 'rgba(0,0,0,0.12)' : 'rgba(0,0,0,0.18)';
+        ctx.strokeRect(x+0.5, y+0.5, cs-1, cs-1);
+      }
+
+      if(mode === 'numbers' && cs >= 7) {
+        const lum = 0.299*rgb[0]+0.587*rgb[1]+0.114*rgb[2];
+        ctx.fillStyle = mode==='solution' ? (lum>128?'rgba(0,0,0,0.55)':'rgba(255,255,255,0.7)') : 'rgba(0,0,0,0.65)';
+        const fs = cs <= 9 ? cs*0.55 : cs*0.5;
+        ctx.font = `${Math.max(5,fs)}px system-ui,sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(n, x+cs/2, y+cs/2);
+      }
+    }
+  }
+
+  setupHover(canvas, gs, cs);
+}
+
+function setupHover(canvas, gs, cs) {
+  const tip = document.getElementById('tooltip');
+  canvas.onmousemove = e => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const cx = Math.floor((e.clientX-rect.left)*scaleX/cs);
+    const cy = Math.floor((e.clientY-rect.top)*scaleY/cs);
+    if(cx<0||cx>=gs||cy<0||cy>=gs){tip.style.display='none';return;}
+    const n = grid[cy][cx];
+    if(n===0){tip.style.display='none';return;}
+    tip.style.display='block';
+    tip.style.left=(e.clientX+12)+'px';
+    tip.style.top=(e.clientY-24)+'px';
+    tip.textContent = `#${n} — ${colors[n-1]}`;
+  };
+  canvas.onmouseleave = () => { tip.style.display='none'; };
+}
+
+function buildLegend() {
+  const legend = document.getElementById('legend');
+  legend.innerHTML = '';
+  colors.forEach((hex, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'legend-chip';
+    chip.innerHTML = `<div class="legend-swatch" style="background:${hex}"></div><span><strong>${i+1}</strong> ${hex}</span>`;
+    legend.appendChild(chip);
+  });
+}
+
+function setMode(m) {
+  currentMode = m;
+  ['numbers','blank','solution'].forEach(id => {
+    document.getElementById('mBtn-'+id).classList.toggle('active', id===m);
+  });
+  if(grid) renderGrid();
+}
+
+function setStatus(msg) {
+  document.getElementById('statusMsg').textContent = msg;
+}
+
+function downloadCanvas() {
+  const canvas = document.getElementById('gridCanvas');
+  const a = document.createElement('a');
+  a.download = `color-by-number-${currentMode}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+// ---------- Square crop ----------
+const cropState = { img:null, cw:0, ch:0, scale:1, bx:0, by:0, bs:0 };
+
+function openCropModal(img) {
+  const canvas = document.getElementById('cropCanvas');
+  const ctx = canvas.getContext('2d');
+  const maxW = Math.min(window.innerWidth * 0.78, 820);
+  const maxH = Math.min(window.innerHeight * 0.62, 620);
+  const ratio = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
+  const dw = Math.round(img.naturalWidth * ratio);
+  const dh = Math.round(img.naturalHeight * ratio);
+  canvas.width = dw;
+  canvas.height = dh;
+  ctx.drawImage(img, 0, 0, dw, dh);
+
+  cropState.img = img;
+  cropState.cw = dw;
+  cropState.ch = dh;
+  cropState.scale = ratio;
+
+  const s = Math.min(dw, dh);
+  cropState.bs = s;
+  cropState.bx = Math.round((dw - s) / 2);
+  cropState.by = Math.round((dh - s) / 2);
+
+  updateCropBox();
+  document.getElementById('cropModal').classList.add('active');
+}
+
+function updateCropBox() {
+  const box = document.getElementById('cropBox');
+  box.style.left = cropState.bx + 'px';
+  box.style.top = cropState.by + 'px';
+  box.style.width = cropState.bs + 'px';
+  box.style.height = cropState.bs + 'px';
+}
+
+function applyCrop() {
+  if(!cropState.img) { closeCropModal(); return; }
+  const sx = cropState.bx / cropState.scale;
+  const sy = cropState.by / cropState.scale;
+  const ss = cropState.bs / cropState.scale;
+
+  const out = document.createElement('canvas');
+  out.width = Math.round(ss);
+  out.height = Math.round(ss);
+  const ctx = out.getContext('2d');
+  ctx.drawImage(cropState.img, sx, sy, ss, ss, 0, 0, out.width, out.height);
+
+  const dataUrl = out.toDataURL('image/png');
+  const newImg = new Image();
+  newImg.onload = () => {
+    imgData = newImg;
+    const t = document.getElementById('thumb');
+    t.src = dataUrl;
+    t.style.display = 'block';
+    document.querySelector('.upload-zone strong').textContent = 'Image cropped';
+    document.getElementById('recropBtn').style.display = '';
+  };
+  newImg.src = dataUrl;
+
+  closeCropModal();
+}
+
+function cancelCrop() {
+  if(originalImg) imgData = originalImg;
+  closeCropModal();
+}
+
+function closeCropModal() {
+  document.getElementById('cropModal').classList.remove('active');
+}
+
+function reopenCrop() {
+  if(originalImg) openCropModal(originalImg);
+}
+
+(function setupCropDrag() {
+  const box = document.getElementById('cropBox');
+  const stage = document.getElementById('cropStage');
+  let dragging = null;
+
+  const startDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const cls = e.target.classList;
+    const handle = ['nw','ne','sw','se'].find(h => cls.contains(h));
+    dragging = {
+      type: handle || 'move',
+      startX: e.clientX,
+      startY: e.clientY,
+      bx: cropState.bx,
+      by: cropState.by,
+      bs: cropState.bs
+    };
+    if(box.setPointerCapture && e.pointerId != null) {
+      try { box.setPointerCapture(e.pointerId); } catch(_) {}
+    }
+  };
+
+  box.addEventListener('pointerdown', startDrag);
+
+  document.addEventListener('pointermove', e => {
+    if(!dragging) return;
+    const dx = e.clientX - dragging.startX;
+    const dy = e.clientY - dragging.startY;
+    const cw = cropState.cw, ch = cropState.ch;
+    const minS = 20;
+
+    if(dragging.type === 'move') {
+      let nx = Math.max(0, Math.min(cw - dragging.bs, dragging.bx + dx));
+      let ny = Math.max(0, Math.min(ch - dragging.bs, dragging.by + dy));
+      cropState.bx = nx; cropState.by = ny;
+    } else {
+      let delta;
+      if(dragging.type === 'se') delta = Math.max(dx, dy);
+      else if(dragging.type === 'nw') delta = Math.max(-dx, -dy);
+      else if(dragging.type === 'ne') delta = Math.max(dx, -dy);
+      else delta = Math.max(-dx, dy); // sw
+
+      let ns = Math.max(minS, dragging.bs + delta);
+      let nx = dragging.bx, ny = dragging.by;
+
+      if(dragging.type === 'se') {
+        ns = Math.min(ns, cw - dragging.bx, ch - dragging.by);
+      } else if(dragging.type === 'nw') {
+        const brx = dragging.bx + dragging.bs;
+        const bry = dragging.by + dragging.bs;
+        ns = Math.min(ns, brx, bry);
+        nx = brx - ns;
+        ny = bry - ns;
+      } else if(dragging.type === 'ne') {
+        const bly = dragging.by + dragging.bs;
+        ns = Math.min(ns, cw - dragging.bx, bly);
+        ny = bly - ns;
+      } else { // sw
+        const trx = dragging.bx + dragging.bs;
+        ns = Math.min(ns, trx, ch - dragging.by);
+        nx = trx - ns;
+      }
+
+      cropState.bx = nx; cropState.by = ny; cropState.bs = ns;
+    }
+
+    updateCropBox();
+  });
+
+  document.addEventListener('pointerup', () => { dragging = null; });
+})();
+
+loadPreset('lego20');
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: lego-color-by-number
+    runtime: static
+    buildCommand: ""
+    staticPublishPath: .
