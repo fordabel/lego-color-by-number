@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Color by Number Pipeline</title>
+<title>LEGO Color-by-Number Pipeline</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,sans-serif;background:#f5f4f0;color:#1a1a1a;min-height:100vh}
-.app{max-width:1100px;margin:0 auto;padding:24px 16px;display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start}
-.panel{background:#fff;border:0.5px solid rgba(0,0,0,0.12);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.app{max-width:1200px;margin:0 auto;padding:24px 16px;display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start}
+.panel{background:#fff;border:0.5px solid rgba(0,0,0,0.12);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px}
 .panel-title{font-size:13px;font-weight:600;letter-spacing:0.05em;color:#666;text-transform:uppercase}
 .field{display:flex;flex-direction:column;gap:6px}
 label{font-size:13px;color:#444;font-weight:500}
@@ -21,9 +21,12 @@ select,input[type=number]{width:100%;padding:7px 10px;border:0.5px solid rgba(0,
 .upload-zone strong{font-size:14px;color:#444}
 .thumb{width:100%;max-height:140px;object-fit:contain;border-radius:6px;margin-top:8px;display:none}
 .color-list{display:flex;flex-wrap:wrap;gap:6px;min-height:40px;padding:8px;border:0.5px solid rgba(0,0,0,0.12);border-radius:8px;background:#fafaf8}
-.chip{width:34px;height:34px;border-radius:6px;border:0.5px solid rgba(0,0,0,0.15);cursor:pointer;position:relative;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.chip .del{display:none;position:absolute;inset:0;background:rgba(0,0,0,0.55);border-radius:6px;color:#fff;font-size:15px;align-items:center;justify-content:center}
+.chip{position:relative;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px}
+.chip .swatch{width:34px;height:34px;border-radius:6px;border:0.5px solid rgba(0,0,0,0.15);cursor:pointer;position:relative}
+.chip .del{display:none;position:absolute;inset:0;background:rgba(0,0,0,0.55);border-radius:6px;color:#fff;font-size:15px;align-items:center;justify-content:center;cursor:pointer}
 .chip:hover .del{display:flex}
+.chip .qty{display:none;width:34px;font-size:10px;padding:1px 2px;border:0.5px solid rgba(0,0,0,0.2);border-radius:4px;text-align:center}
+.chip.show-qty .qty{display:block}
 .add-color-row{display:flex;gap:8px;align-items:center}
 input[type=color]{width:40px;height:32px;padding:2px;border:0.5px solid rgba(0,0,0,0.2);border-radius:6px;cursor:pointer;background:#fff}
 .hex-in{flex:1;padding:7px 10px;border:0.5px solid rgba(0,0,0,0.2);border-radius:6px;font-size:13px;font-family:monospace}
@@ -33,25 +36,35 @@ input[type=color]{width:40px;height:32px;padding:2px;border:0.5px solid rgba(0,0
 .btn-primary{background:#5a4fd8;color:#fff;border-color:#5a4fd8}
 .btn-primary:hover{background:#4a3fc8}
 .btn-sm{padding:5px 12px;font-size:12px}
-.presets{display:flex;flex-wrap:wrap;gap:5px}
-.preset-btn{padding:4px 10px;font-size:11px;border:0.5px solid rgba(0,0,0,0.15);border-radius:5px;cursor:pointer;background:#fff;color:#555;transition:background 0.15s}
-.preset-btn:hover{background:#f0effe;border-color:#5a4fd8;color:#5a4fd8}
-.output-panel{background:#fff;border:0.5px solid rgba(0,0,0,0.12);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.output-panel{background:#fff;border:0.5px solid rgba(0,0,0,0.12);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px}
 .output-header{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.mode-btns{display:flex;gap:6px}
-.mode-btn{padding:6px 14px;font-size:12px;border:0.5px solid rgba(0,0,0,0.2);border-radius:6px;cursor:pointer;background:#fff;color:#555;transition:all 0.15s;font-weight:500}
+.mode-btns{display:flex;gap:6px;flex-wrap:wrap}
+.mode-btn{padding:6px 12px;font-size:12px;border:0.5px solid rgba(0,0,0,0.2);border-radius:6px;cursor:pointer;background:#fff;color:#555;transition:all 0.15s;font-weight:500}
 .mode-btn.active{background:#5a4fd8;color:#fff;border-color:#5a4fd8}
 .grid-scroll{overflow:auto;max-width:100%;max-height:70vh;border:0.5px solid rgba(0,0,0,0.1);border-radius:8px}
 #gridCanvas{display:block;image-rendering:pixelated}
 .legend{display:flex;flex-wrap:wrap;gap:6px}
-.legend-chip{display:flex;align-items:center;gap:5px;font-size:11px;background:#f5f4f0;border-radius:5px;padding:4px 8px;border:0.5px solid rgba(0,0,0,0.08)}
+.legend-chip{display:flex;align-items:center;gap:5px;font-size:11px;background:#f5f4f0;border-radius:5px;padding:4px 8px;border:0.5px solid rgba(0,0,0,0.08);cursor:pointer;transition:all 0.15s}
+.legend-chip:hover{background:#e9e8e1}
+.legend-chip.selected{background:#f0effe;border-color:#5a4fd8;box-shadow:0 0 0 1px #5a4fd8}
 .legend-swatch{width:16px;height:16px;border-radius:3px;border:0.5px solid rgba(0,0,0,0.12);flex-shrink:0}
+.legend-name{color:#444}
+.legend-low{color:#c83232;font-weight:600}
 .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;color:#aaa;gap:8px}
 .empty-state svg{opacity:0.3}
 .empty-state p{font-size:14px}
-.row-info{display:flex;gap:12px;font-size:12px;color:#888}
-.hint{font-size:11px;color:#999;margin-top:2px}
+.row-info{display:flex;gap:12px;font-size:12px;color:#888;align-items:center}
+.hint{font-size:11px;color:#999;margin-top:2px;display:block}
 .section-divider{border:none;border-top:0.5px solid rgba(0,0,0,0.08);margin:2px 0}
+.section-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:4px 0;font-weight:600;color:#444}
+.section-toggle:hover{color:#5a4fd8}
+.toggle-arrow{font-size:11px;transition:transform 0.15s;color:#999}
+.toggle-arrow.collapsed{transform:rotate(-90deg)}
+.section-body{display:flex;flex-direction:column;gap:10px;padding-top:6px}
+.adjust-row{display:flex;flex-direction:column;gap:4px}
+.value-out{font-size:12px;min-width:30px;text-align:right;color:#555;font-family:monospace}
+.checkbox-row{display:flex;gap:6px;align-items:center;font-size:12px}
+.checkbox-row label{font-size:12px;color:#444;cursor:pointer}
 .tooltip{position:fixed;background:#1a1a1a;color:#fff;font-size:11px;padding:4px 8px;border-radius:4px;pointer-events:none;display:none;z-index:999;white-space:nowrap}
 .crop-modal{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
 .crop-modal.active{display:flex}
@@ -70,13 +83,33 @@ input[type=color]{width:40px;height:32px;padding:2px;border:0.5px solid rgba(0,0
 .crop-actions{display:flex;gap:10px;justify-content:flex-end;width:100%;margin-top:4px}
 .recrop-btn{padding:5px 10px;font-size:11px;border:0.5px solid rgba(0,0,0,0.2);border-radius:5px;cursor:pointer;background:#fff;color:#555;margin-top:6px;align-self:flex-start}
 .recrop-btn:hover{background:#f0effe;border-color:#5a4fd8;color:#5a4fd8}
-@media(max-width:700px){.app{grid-template-columns:1fr}}
+#paintHint{font-size:11px;color:#5a4fd8;background:#f0effe;padding:6px 10px;border-radius:6px;line-height:1.5}
+.stud-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+.stud-table th,.stud-table td{text-align:left;padding:5px 8px;border-bottom:0.5px solid rgba(0,0,0,0.06)}
+.stud-table th{color:#888;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.04em}
+.stud-table td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:monospace}
+.stud-table .swatch-sm{display:inline-block;width:14px;height:14px;border-radius:3px;border:0.5px solid rgba(0,0,0,0.12);vertical-align:middle;margin-right:6px}
+.stud-table .row-low{color:#c83232}
+.report-section{border-top:0.5px solid rgba(0,0,0,0.08);padding-top:14px}
+.report-title{font-size:13px;font-weight:600;color:#444;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.report-title .meta{font-size:11px;color:#888;font-weight:400}
+@media(max-width:780px){.app{grid-template-columns:1fr}}
+@media print{
+  body{background:#fff}
+  .panel.sidebar,.tooltip,.mode-btns,#downloadBtn,#printBtn,#paintHint,.recrop-btn,.crop-modal{display:none!important}
+  .app{display:block;padding:0;max-width:100%}
+  .output-panel{border:none;padding:0;box-shadow:none}
+  .grid-scroll{overflow:visible;max-height:none;border:none}
+  #gridCanvas{max-width:100%;height:auto}
+  .stud-table{page-break-inside:avoid}
+  .legend{page-break-inside:avoid}
+}
 </style>
 </head>
 <body>
 <div class="app">
 
-<div class="panel">
+<div class="panel sidebar">
   <div class="panel-title">Setup</div>
 
   <div class="field">
@@ -103,52 +136,113 @@ input[type=color]{width:40px;height:32px;padding:2px;border:0.5px solid rgba(0,0
   </div>
 
   <div class="field">
-    <label>Cell display size (px)</label>
+    <label>Cell display size</label>
     <div style="display:flex;align-items:center;gap:10px">
       <input type="range" id="cellSize" min="5" max="24" value="11" style="flex:1">
-      <span id="cellSizeOut" style="font-size:13px;min-width:26px;color:#555">11px</span>
+      <span class="value-out" id="cellSizeOut">11px</span>
     </div>
   </div>
 
-  <div class="field">
-    <label>Background threshold</label>
-    <div style="display:flex;align-items:center;gap:10px">
-      <input type="range" id="bgThresh" min="0" max="80" value="30">
-      <span id="bgThreshOut" style="font-size:13px;min-width:26px;color:#555">30</span>
-    </div>
-    <span class="hint">Pixels this close to white are treated as background</span>
-  </div>
+  <hr class="section-divider">
 
   <div class="field">
-    <label>Skin tone boost</label>
-    <div style="display:flex;align-items:center;gap:10px">
-      <input type="range" id="skinPush" min="0" max="100" value="40">
-      <span id="skinPushOut" style="font-size:13px;min-width:26px;color:#555">40</span>
+    <label class="section-toggle" onclick="toggleSection('adjBody','adjArrow')">
+      <span>Image adjustments</span>
+      <span class="toggle-arrow" id="adjArrow">▾</span>
+    </label>
+    <div class="section-body" id="adjBody">
+      <div class="adjust-row">
+        <label>Brightness</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="range" id="adjBright" min="-50" max="50" value="0" style="flex:1">
+          <span class="value-out" id="adjBrightOut">0</span>
+        </div>
+      </div>
+      <div class="adjust-row">
+        <label>Contrast</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="range" id="adjContrast" min="-50" max="50" value="0" style="flex:1">
+          <span class="value-out" id="adjContrastOut">0</span>
+        </div>
+      </div>
+      <div class="adjust-row">
+        <label>Saturation</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="range" id="adjSat" min="-100" max="100" value="0" style="flex:1">
+          <span class="value-out" id="adjSatOut">0</span>
+        </div>
+      </div>
+      <div class="adjust-row">
+        <label>Hue shift</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="range" id="adjHue" min="-180" max="180" value="0" style="flex:1">
+          <span class="value-out" id="adjHueOut">0</span>
+        </div>
+      </div>
+      <div class="adjust-row">
+        <label>Skin tone boost</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="range" id="skinPush" min="0" max="100" value="40" style="flex:1">
+          <span class="value-out" id="skinPushOut">40</span>
+        </div>
+        <span class="hint">Warms &amp; saturates pixels — fixes faces graying out</span>
+      </div>
+      <div class="adjust-row">
+        <label>Background threshold</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="range" id="bgThresh" min="0" max="80" value="30" style="flex:1">
+          <span class="value-out" id="bgThreshOut">30</span>
+        </div>
+        <span class="hint">Pixels close to white become background</span>
+      </div>
     </div>
-    <span class="hint">Warms &amp; saturates pixels before matching — fixes faces graying out in cool-toned photos</span>
+  </div>
+
+  <hr class="section-divider">
+
+  <div class="field">
+    <label class="section-toggle" onclick="toggleSection('matchBody','matchArrow')">
+      <span>Matching</span>
+      <span class="toggle-arrow collapsed" id="matchArrow">▾</span>
+    </label>
+    <div class="section-body" id="matchBody" style="display:none">
+      <div class="checkbox-row">
+        <input type="checkbox" id="ditherChk">
+        <label for="ditherChk">Floyd-Steinberg dithering</label>
+      </div>
+      <span class="hint" style="margin-top:-6px;margin-left:22px">Smooths gradations (faces, skies). Adds grain.</span>
+      <div class="checkbox-row">
+        <input type="checkbox" id="accurateMatchChk" checked>
+        <label for="accurateMatchChk">CIEDE2000 perceptual matching</label>
+      </div>
+      <span class="hint" style="margin-top:-6px;margin-left:22px">More accurate, slightly slower</span>
+      <div class="checkbox-row">
+        <input type="checkbox" id="stockLimitChk" onchange="toggleStockLimit()">
+        <label for="stockLimitChk">Limit by stock counts</label>
+      </div>
+      <span class="hint" style="margin-top:-6px;margin-left:22px">Shows qty per chip; matching falls back when a color runs out</span>
+    </div>
   </div>
 
   <hr class="section-divider">
 
   <div class="field">
     <label>Color palette</label>
-    <div class="presets">
-      <span style="font-size:11px;color:#999;align-self:center">Presets:</span>
-      <button class="preset-btn" onclick="loadPreset('lego20')">LEGO 20</button>
-      <button class="preset-btn" onclick="loadPreset('standard')">Standard 16</button>
-      <button class="preset-btn" onclick="loadPreset('crayola')">Crayola 16</button>
-      <button class="preset-btn" onclick="loadPreset('warm')">Warm tones</button>
-      <button class="preset-btn" onclick="loadPreset('cool')">Cool tones</button>
-      <button class="preset-btn" onclick="loadPreset('earth')">Earth tones</button>
-      <button class="preset-btn" onclick="loadPreset('pastel')">Pastels</button>
-      <button class="preset-btn" onclick="loadPreset('mono')">Monochrome</button>
-      <button class="preset-btn" onclick="loadPreset('starwars')">Star Wars</button>
+    <select id="presetSelect" onchange="loadPresetFromSelect()">
+      <option value="">— Choose a preset —</option>
+    </select>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:6px">
+      <select id="storedSelect" onchange="loadStoredPalette()" style="flex:1">
+        <option value="">— My saved palettes —</option>
+      </select>
+      <button class="btn btn-sm" onclick="saveCurrentAsStored()">Save</button>
+      <button class="btn btn-sm" onclick="deleteStoredPalette()" title="Delete selected saved palette">×</button>
     </div>
     <div class="color-list" id="colorList"></div>
     <div class="add-color-row">
       <input type="color" id="colorPicker" value="#ff0000">
       <input type="text" class="hex-in" id="hexInput" placeholder="#FF0000" maxlength="7">
-      <button class="btn btn-sm" onclick="addColor()">Add</button>
+      <button class="btn btn-sm" onclick="addColorBtn()">Add</button>
     </div>
     <div class="row-info">
       <span id="colorCount">0 colors</span>
@@ -171,8 +265,15 @@ input[type=color]{width:40px;height:32px;padding:2px;border:0.5px solid rgba(0,0
       <button class="mode-btn active" id="mBtn-numbers" onclick="setMode('numbers')">Numbers</button>
       <button class="mode-btn" id="mBtn-blank" onclick="setMode('blank')">Blank</button>
       <button class="mode-btn" id="mBtn-solution" onclick="setMode('solution')">Solution</button>
+      <button class="mode-btn" id="mBtn-studs" onclick="setMode('studs')">3D studs</button>
+      <button class="mode-btn" id="mBtn-warhol" onclick="setMode('warhol')">Warhol ×4</button>
     </div>
     <button class="btn btn-sm" id="downloadBtn" onclick="downloadCanvas()" style="display:none">Save PNG</button>
+    <button class="btn btn-sm" id="printBtn" onclick="printInstructions()" style="display:none">Print</button>
+  </div>
+
+  <div id="paintHint" style="display:none">
+    <strong>Paint mode</strong> — click any cell on the grid to repaint it with the selected color. Click the same legend chip again to stop.
   </div>
 
   <div class="grid-scroll" id="gridScroll">
@@ -180,12 +281,20 @@ input[type=color]{width:40px;height:32px;padding:2px;border:0.5px solid rgba(0,0
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9M15 21V9M3 15h18"/>
       </svg>
-      <p>Upload an image and set your palette to begin</p>
+      <p>Upload an image and pick a palette to begin</p>
     </div>
     <canvas id="gridCanvas" style="display:none"></canvas>
   </div>
 
   <div class="legend" id="legend"></div>
+
+  <div id="studReport" style="display:none" class="report-section">
+    <div class="report-title">
+      <span>Build instructions</span>
+      <span class="meta" id="studTotal"></span>
+    </div>
+    <table class="stud-table" id="studTable"></table>
+  </div>
 </div>
 
 </div>
@@ -216,51 +325,163 @@ input[type=color]{width:40px;height:32px;padding:2px;border:0.5px solid rgba(0,0
 <canvas id="offscreen" style="display:none"></canvas>
 
 <script>
-const PRESETS = {
-  lego20:  ['#FFFFFF','#05131D','#C91A09','#0055BF','#F2CD37','#A0A5A9','#6C6E68','#582A12','#E4CD9E','#237841','#BBE90B','#FE8A18','#720E0F','#184632','#5A93DB','#958A73','#5A7E8B','#9FC3E9','#FC97AC','#583927'],
-  standard:['#FFFFFF','#C0C0C0','#808080','#000000','#8B4513','#8B0000','#FF0000','#FF8C00','#FFD700','#228B22','#00FF00','#87CEEB','#00CED1','#4169E1','#8A2BE2','#FF1493'],
-  crayola: ['#EE4B2B','#FF7F00','#FFD700','#00A550','#0047AB','#8B008B','#FF69B4','#A52A2A','#000000','#FFFFFF','#808080','#C0C0C0','#8B4513','#FF8C00','#40E0D0','#98FB98'],
-  warm:    ['#FF2400','#FF6600','#FF8C00','#FFA500','#FFD700','#FFEC8B','#FFDAB9','#E9967A','#CD5C5C','#B22222','#8B0000','#FF69B4','#FF1493','#C71585','#4B0000','#FFFFFF'],
-  cool:    ['#000080','#0000CD','#4169E1','#1E90FF','#00BFFF','#87CEEB','#B0E0E6','#00CED1','#008B8B','#006400','#228B22','#32CD32','#98FB98','#8A2BE2','#9400D3','#FFFFFF'],
-  earth:   ['#8B4513','#A0522D','#CD853F','#D2691E','#DEB887','#F4A460','#FAEBD7','#556B2F','#6B8E23','#808000','#8FBC8F','#2E8B57','#696969','#808080','#A9A9A9','#FFFFFF'],
-  pastel:  ['#FFB3BA','#FFDFBA','#FFFFBA','#BAFFC9','#BAE1FF','#D4BAFF','#FFB3E6','#C9FFE5','#C9D6FF','#FFD9B3','#B3FFD9','#D9B3FF','#FFC8B3','#B3FFFD','#F7C8E0','#FFFFFF'],
-  mono:    ['#FFFFFF','#E8E8E8','#D0D0D0','#B8B8B8','#A0A0A0','#888888','#707070','#585858','#404040','#2C2C2C','#181818','#000000'],
-  starwars:['#1a1a1a','#4a4a4a','#888888','#c8c8c8','#FFFFFF','#8B0000','#CC0000','#FF4500','#FF8C00','#C09000','#1a3a6a','#2E75B6','#87CEEB','#2d5a27','#4CAF50','#B5651D']
+/* ---------- Palette presets ---------- */
+function ramp(from, to, n) {
+  const [r1,g1,b1] = hexToRgb(from), [r2,g2,b2] = hexToRgb(to);
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    out.push(rgbToHex(
+      Math.round(r1 + (r2 - r1) * t),
+      Math.round(g1 + (g2 - g1) * t),
+      Math.round(b1 + (b2 - b1) * t)
+    ));
+  }
+  return out;
+}
+function hexToRgb(hex) {
+  const h = hex.replace('#','');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+function rgbToHex(r,g,b) {
+  return '#' + [r,g,b].map(x=>Math.max(0,Math.min(255,x|0)).toString(16).padStart(2,'0')).join('').toUpperCase();
+}
+function namedHexes(arr) { return arr.map(h => ({hex: h, name: h})); }
+
+const LEGO20 = [
+  {hex:'#FFFFFF', name:'White'},
+  {hex:'#05131D', name:'Black'},
+  {hex:'#C91A09', name:'Red'},
+  {hex:'#0055BF', name:'Blue'},
+  {hex:'#F2CD37', name:'Yellow'},
+  {hex:'#A0A5A9', name:'Lt Bluish Gray'},
+  {hex:'#6C6E68', name:'Dk Bluish Gray'},
+  {hex:'#582A12', name:'Reddish Brown'},
+  {hex:'#E4CD9E', name:'Tan'},
+  {hex:'#237841', name:'Green'},
+  {hex:'#BBE90B', name:'Lime'},
+  {hex:'#FE8A18', name:'Orange'},
+  {hex:'#720E0F', name:'Dark Red'},
+  {hex:'#184632', name:'Dark Green'},
+  {hex:'#5A93DB', name:'Medium Blue'},
+  {hex:'#958A73', name:'Dark Tan'},
+  {hex:'#5A7E8B', name:'Sand Blue'},
+  {hex:'#9FC3E9', name:'Bt Lt Blue'},
+  {hex:'#FC97AC', name:'Bright Pink'},
+  {hex:'#583927', name:'Dark Brown'},
+];
+
+const LEGO_BASIC = [
+  {hex:'#FFFFFF', name:'White'},
+  {hex:'#05131D', name:'Black'},
+  {hex:'#C91A09', name:'Red'},
+  {hex:'#0055BF', name:'Blue'},
+  {hex:'#F2CD37', name:'Yellow'},
+  {hex:'#237841', name:'Green'},
+  {hex:'#FE8A18', name:'Orange'},
+  {hex:'#A0A5A9', name:'Lt Gray'},
+];
+
+const PALETTES = {
+  lego20:    {label:'LEGO 20',         group:'LEGO',     colors: LEGO20},
+  lego8:     {label:'LEGO Basic 8',    group:'LEGO',     colors: LEGO_BASIC},
+  standard:  {label:'Standard 16',     group:'Standard', colors: namedHexes(['#FFFFFF','#C0C0C0','#808080','#000000','#8B4513','#8B0000','#FF0000','#FF8C00','#FFD700','#228B22','#00FF00','#87CEEB','#00CED1','#4169E1','#8A2BE2','#FF1493'])},
+  crayola:   {label:'Crayola 16',      group:'Standard', colors: namedHexes(['#EE4B2B','#FF7F00','#FFD700','#00A550','#0047AB','#8B008B','#FF69B4','#A52A2A','#000000','#FFFFFF','#808080','#C0C0C0','#8B4513','#FF8C00','#40E0D0','#98FB98'])},
+  warm:      {label:'Warm tones',      group:'Mood',     colors: namedHexes(['#FF2400','#FF6600','#FF8C00','#FFA500','#FFD700','#FFEC8B','#FFDAB9','#E9967A','#CD5C5C','#B22222','#8B0000','#FF69B4','#FF1493','#C71585','#4B0000','#FFFFFF'])},
+  cool:      {label:'Cool tones',      group:'Mood',     colors: namedHexes(['#000080','#0000CD','#4169E1','#1E90FF','#00BFFF','#87CEEB','#B0E0E6','#00CED1','#008B8B','#006400','#228B22','#32CD32','#98FB98','#8A2BE2','#9400D3','#FFFFFF'])},
+  earth:     {label:'Earth tones',     group:'Mood',     colors: namedHexes(['#8B4513','#A0522D','#CD853F','#D2691E','#DEB887','#F4A460','#FAEBD7','#556B2F','#6B8E23','#808000','#8FBC8F','#2E8B57','#696969','#808080','#A9A9A9','#FFFFFF'])},
+  pastel:    {label:'Pastels',         group:'Mood',     colors: namedHexes(['#FFB3BA','#FFDFBA','#FFFFBA','#BAFFC9','#BAE1FF','#D4BAFF','#FFB3E6','#C9FFE5','#C9D6FF','#FFD9B3','#B3FFD9','#D9B3FF','#FFC8B3','#B3FFFD','#F7C8E0','#FFFFFF'])},
+  starwars:  {label:'Star Wars',       group:'Mood',     colors: namedHexes(['#1A1A1A','#4A4A4A','#888888','#C8C8C8','#FFFFFF','#8B0000','#CC0000','#FF4500','#FF8C00','#C09000','#1A3A6A','#2E75B6','#87CEEB','#2D5A27','#4CAF50','#B5651D'])},
+  neon:      {label:'Neon / retro',    group:'Mood',     colors: namedHexes(['#000000','#FFFFFF','#FF14F0','#00FFE5','#FFEE00','#39FF14','#FF0080','#FF6E27','#7DF9FF','#9B30FF'])},
+  mono_bw:   {label:'Mono — B&W ramp', group:'Mono',     colors: namedHexes(ramp('#000000','#FFFFFF', 10))},
+  mono_sepia:{label:'Mono — Sepia',    group:'Mono',     colors: namedHexes(ramp('#1F0F08','#F8E8C8', 8))},
+  mono_blue: {label:'Mono — Blue',     group:'Mono',     colors: namedHexes(ramp('#031634','#E1F0FF', 8))},
+  halftone:  {label:'B&W halftone',    group:'Mono',     colors: [{hex:'#FFFFFF',name:'White'},{hex:'#000000',name:'Black'}]},
+  duo_bw:    {label:'Duo — B&W',       group:'Duo',      colors: [{hex:'#FFFFFF',name:'White'},{hex:'#000000',name:'Black'}]},
+  duo_redblk:{label:'Duo — Red/Black', group:'Duo',      colors: [{hex:'#FFFFFF',name:'White'},{hex:'#C91A09',name:'Red'},{hex:'#05131D',name:'Black'}]},
+  duo_blyel: {label:'Duo — Blue/Yel',  group:'Duo',      colors: [{hex:'#FFFFFF',name:'White'},{hex:'#0055BF',name:'Blue'},{hex:'#F2CD37',name:'Yellow'}]},
 };
 
+const WARHOL_PANELS = [
+  [{hex:'#FFFFFF',name:'White'},{hex:'#05131D',name:'Black'},{hex:'#C91A09',name:'Red'},{hex:'#F2CD37',name:'Yellow'}],
+  [{hex:'#FFFFFF',name:'White'},{hex:'#05131D',name:'Black'},{hex:'#0055BF',name:'Blue'},{hex:'#9FC3E9',name:'Lt Blue'}],
+  [{hex:'#FFFFFF',name:'White'},{hex:'#05131D',name:'Black'},{hex:'#FC97AC',name:'Pink'},{hex:'#A12B8E',name:'Magenta'}],
+  [{hex:'#FFFFFF',name:'White'},{hex:'#05131D',name:'Black'},{hex:'#237841',name:'Green'},{hex:'#BBE90B',name:'Lime'}],
+];
+
+/* ---------- State ---------- */
 let palette = [];
 let grid = null;
-let colors = null;
+let warholGrids = null;
+let colors = [];
+let colorNames = [];
+let qtys = [];
 let currentMode = 'numbers';
 let cellSize = 11;
 let imgData = null;
 let originalImg = null;
+let paintIdx = -1;
 
 const colorPicker = document.getElementById('colorPicker');
 const hexInput = document.getElementById('hexInput');
 const cellSizeSlider = document.getElementById('cellSize');
 const bgThreshSlider = document.getElementById('bgThresh');
 
+/* ---------- UI wiring ---------- */
+function buildPresetSelect() {
+  const sel = document.getElementById('presetSelect');
+  const groups = {};
+  Object.entries(PALETTES).forEach(([key, p]) => {
+    if (!groups[p.group]) groups[p.group] = [];
+    groups[p.group].push({key, label: p.label});
+  });
+  const order = ['LEGO','Standard','Mood','Mono','Duo'];
+  order.forEach(g => {
+    if (!groups[g]) return;
+    const og = document.createElement('optgroup');
+    og.label = g;
+    groups[g].forEach(({key, label}) => {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = label;
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  });
+}
+buildPresetSelect();
+function loadPresetFromSelect() {
+  const v = document.getElementById('presetSelect').value;
+  if (!v) return;
+  loadPreset(v);
+}
+function loadPreset(key) {
+  const p = PALETTES[key];
+  if (!p) return;
+  palette = p.colors.map(c => ({hex: c.hex.toUpperCase(), name: c.name, qty: undefined}));
+  renderPalette();
+  document.getElementById('presetSelect').value = key;
+}
+
 colorPicker.addEventListener('input', e => { hexInput.value = e.target.value.toUpperCase(); });
 hexInput.addEventListener('input', e => {
   const v = e.target.value.trim();
   if(/^#[0-9A-Fa-f]{6}$/.test(v)) colorPicker.value = v;
 });
-hexInput.addEventListener('keydown', e => { if(e.key==='Enter') addColor(); });
+hexInput.addEventListener('keydown', e => { if(e.key==='Enter') addColorBtn(); });
 
 cellSizeSlider.addEventListener('input', e => {
   cellSize = +e.target.value;
   document.getElementById('cellSizeOut').textContent = cellSize + 'px';
-  if(grid) renderGrid();
+  if(grid && currentMode !== 'warhol') renderGrid();
 });
 
-bgThreshSlider.addEventListener('input', e => {
-  document.getElementById('bgThreshOut').textContent = e.target.value;
-});
-
-const skinPushSlider = document.getElementById('skinPush');
-skinPushSlider.addEventListener('input', e => {
-  document.getElementById('skinPushOut').textContent = e.target.value;
+const adjBindings = ['adjBright','adjContrast','adjSat','adjHue','skinPush','bgThresh'];
+adjBindings.forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', e => {
+    document.getElementById(id + 'Out').textContent = e.target.value;
+  });
 });
 
 document.getElementById('fileInput').addEventListener('change', e => {
@@ -298,23 +519,19 @@ function showThumb(url) {
   document.getElementById('recropBtn').style.display = '';
 }
 
-function hexToRgb(hex) {
-  const h = hex.replace('#','');
-  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+function toggleSection(bodyId, arrowId) {
+  const body = document.getElementById(bodyId);
+  const arrow = document.getElementById(arrowId);
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'flex';
+  arrow.classList.toggle('collapsed', open);
 }
 
-function rgbToHex(r,g,b) {
-  return '#' + [r,g,b].map(x=>Math.max(0,Math.min(255,x)).toString(16).padStart(2,'0')).join('').toUpperCase();
+function toggleStockLimit() {
+  renderPalette();
 }
 
-function colorDist(a, b) {
-  const dr = a[0]-b[0], dg = a[1]-b[1], db = a[2]-b[2];
-  return dr*dr + dg*dg + db*db;
-}
-
-// Perceptual color matching: convert sRGB → CIE Lab and use Delta E.
-// This matches how humans actually see color, so skin tones map to tans/browns
-// instead of muted greens/grays as they do under naive RGB distance.
+/* ---------- Color helpers ---------- */
 function srgbToLinear(c) {
   c = c / 255;
   return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
@@ -323,24 +540,188 @@ function rgbToLab(r, g, b) {
   const lr = srgbToLinear(r);
   const lg = srgbToLinear(g);
   const lb = srgbToLinear(b);
-  // sRGB → XYZ (D65)
   let x = lr * 0.4124564 + lg * 0.3575761 + lb * 0.1804375;
   let y = lr * 0.2126729 + lg * 0.7151522 + lb * 0.0721750;
   let z = lr * 0.0193339 + lg * 0.1191920 + lb * 0.9503041;
-  // Normalize by D65 reference white
   x /= 0.95047; y /= 1.00000; z /= 1.08883;
   const f = (t) => t > 0.008856 ? Math.cbrt(t) : (7.787 * t + 16/116);
   const fx = f(x), fy = f(y), fz = f(z);
   return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
 }
-function labDist(a, b) {
+function labDistSq(a, b) {
   const dL = a[0]-b[0], da = a[1]-b[1], db = a[2]-b[2];
   return dL*dL + da*da + db*db;
 }
 
-// High-quality multi-pass downscale: halves dimensions iteratively until close
-// to target, then performs the final draw. This preserves much more fine detail
-// (mouths, eyes, edges) than a single big downscale step.
+const POW25_7 = Math.pow(25, 7);
+const D2R = Math.PI / 180, R2D = 180 / Math.PI;
+function deltaE2000(lab1, lab2) {
+  const L1 = lab1[0], a1 = lab1[1], b1 = lab1[2];
+  const L2 = lab2[0], a2 = lab2[1], b2 = lab2[2];
+  const C1 = Math.sqrt(a1*a1 + b1*b1);
+  const C2 = Math.sqrt(a2*a2 + b2*b2);
+  const Cb = (C1 + C2) / 2;
+  const Cb7 = Math.pow(Cb, 7);
+  const G = 0.5 * (1 - Math.sqrt(Cb7 / (Cb7 + POW25_7)));
+  const a1p = (1 + G) * a1;
+  const a2p = (1 + G) * a2;
+  const C1p = Math.sqrt(a1p*a1p + b1*b1);
+  const C2p = Math.sqrt(a2p*a2p + b2*b2);
+  let h1p = (b1 === 0 && a1p === 0) ? 0 : ((Math.atan2(b1, a1p) * R2D) + 360) % 360;
+  let h2p = (b2 === 0 && a2p === 0) ? 0 : ((Math.atan2(b2, a2p) * R2D) + 360) % 360;
+  const dLp = L2 - L1;
+  const dCp = C2p - C1p;
+  let dhp;
+  if (C1p * C2p === 0) dhp = 0;
+  else if (Math.abs(h2p - h1p) <= 180) dhp = h2p - h1p;
+  else if (h2p - h1p > 180) dhp = h2p - h1p - 360;
+  else dhp = h2p - h1p + 360;
+  const dHp = 2 * Math.sqrt(C1p * C2p) * Math.sin(dhp * D2R / 2);
+  const Lbar = (L1 + L2) / 2;
+  const Cpbar = (C1p + C2p) / 2;
+  let hpbar;
+  if (C1p * C2p === 0) hpbar = h1p + h2p;
+  else if (Math.abs(h1p - h2p) <= 180) hpbar = (h1p + h2p) / 2;
+  else if (h1p + h2p < 360) hpbar = (h1p + h2p + 360) / 2;
+  else hpbar = (h1p + h2p - 360) / 2;
+  const T = 1
+    - 0.17 * Math.cos((hpbar - 30) * D2R)
+    + 0.24 * Math.cos((2 * hpbar) * D2R)
+    + 0.32 * Math.cos((3 * hpbar + 6) * D2R)
+    - 0.20 * Math.cos((4 * hpbar - 63) * D2R);
+  const dTheta = 30 * Math.exp(-Math.pow((hpbar - 275) / 25, 2));
+  const Cp7 = Math.pow(Cpbar, 7);
+  const RC = 2 * Math.sqrt(Cp7 / (Cp7 + POW25_7));
+  const SL = 1 + (0.015 * Math.pow(Lbar - 50, 2)) / Math.sqrt(20 + Math.pow(Lbar - 50, 2));
+  const SC = 1 + 0.045 * Cpbar;
+  const SH = 1 + 0.015 * Cpbar * T;
+  const RT = -Math.sin(2 * dTheta * D2R) * RC;
+  const dE = Math.sqrt(
+    Math.pow(dLp / SL, 2) +
+    Math.pow(dCp / SC, 2) +
+    Math.pow(dHp / SH, 2) +
+    RT * (dCp / SC) * (dHp / SH)
+  );
+  return dE;
+}
+
+/* ---------- Palette UI ---------- */
+function addColorBtn() {
+  const v = (hexInput.value.trim() || colorPicker.value);
+  addColor(v);
+  hexInput.value = '';
+}
+function addColor(hex, name) {
+  const clean = hex.startsWith('#') ? hex : '#'+hex;
+  if(!/^#[0-9A-Fa-f]{6}$/.test(clean)) return;
+  const upper = clean.toUpperCase();
+  if(palette.some(c => c.hex === upper)) return;
+  palette.push({hex: upper, name: name || upper, qty: undefined});
+  renderPalette();
+}
+function removeColor(i) {
+  palette.splice(i, 1);
+  renderPalette();
+}
+function clearColors() {
+  palette = [];
+  document.getElementById('presetSelect').value = '';
+  document.getElementById('storedSelect').value = '';
+  renderPalette();
+}
+function setQty(i, val) {
+  const n = parseInt(val, 10);
+  palette[i].qty = isFinite(n) && n >= 0 ? n : undefined;
+}
+function renderPalette() {
+  const list = document.getElementById('colorList');
+  list.innerHTML = '';
+  const stockOn = document.getElementById('stockLimitChk').checked;
+  palette.forEach((c, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'chip' + (stockOn ? ' show-qty' : '');
+    wrap.innerHTML = `
+      <div class="swatch" style="background:${c.hex}" title="${c.hex}${c.name && c.name !== c.hex ? ' — '+c.name : ''}">
+        <div class="del" data-i="${i}">×</div>
+      </div>
+      <input class="qty" type="number" min="0" placeholder="∞" value="${c.qty != null ? c.qty : ''}" data-i="${i}">
+    `;
+    list.appendChild(wrap);
+  });
+  list.querySelectorAll('.del').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      removeColor(+el.dataset.i);
+    });
+  });
+  list.querySelectorAll('.qty').forEach(el => {
+    el.addEventListener('input', e => {
+      setQty(+el.dataset.i, e.target.value);
+    });
+  });
+  document.getElementById('colorCount').textContent = palette.length + ' colors';
+}
+
+/* ---------- Stored palettes (localStorage) ---------- */
+const LS_KEY = 'lego_color_pipe_palettes_v2';
+function loadStoredAll() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; }
+  catch (e) { return {}; }
+}
+function saveStoredAll(obj) {
+  localStorage.setItem(LS_KEY, JSON.stringify(obj));
+}
+function refreshStoredSelect() {
+  const sel = document.getElementById('storedSelect');
+  const all = loadStoredAll();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— My saved palettes —</option>';
+  Object.keys(all).sort().forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+  if (all[cur]) sel.value = cur;
+}
+function saveCurrentAsStored() {
+  if (palette.length === 0) { setStatus('Add some colors first.'); return; }
+  const def = document.getElementById('storedSelect').value || 'My palette';
+  const name = prompt('Name this palette:', def);
+  if (!name) return;
+  const all = loadStoredAll();
+  all[name] = palette.map(c => ({hex: c.hex, name: c.name, qty: c.qty}));
+  saveStoredAll(all);
+  refreshStoredSelect();
+  document.getElementById('storedSelect').value = name;
+  setStatus(`Saved palette "${name}".`);
+  setTimeout(()=>setStatus(''), 2000);
+}
+function loadStoredPalette() {
+  const name = document.getElementById('storedSelect').value;
+  if (!name) return;
+  const all = loadStoredAll();
+  const list = all[name];
+  if (!list) return;
+  palette = list.map(c => ({hex: c.hex, name: c.name || c.hex, qty: c.qty}));
+  if (palette.some(c => c.qty != null)) {
+    document.getElementById('stockLimitChk').checked = true;
+  }
+  renderPalette();
+  document.getElementById('presetSelect').value = '';
+}
+function deleteStoredPalette() {
+  const name = document.getElementById('storedSelect').value;
+  if (!name) return;
+  if (!confirm(`Delete saved palette "${name}"?`)) return;
+  const all = loadStoredAll();
+  delete all[name];
+  saveStoredAll(all);
+  refreshStoredSelect();
+}
+refreshStoredSelect();
+
+/* ---------- Image processing ---------- */
 function downscaleHQ(img, targetW, targetH) {
   let curSrc = img;
   let curW = img.naturalWidth || img.width;
@@ -349,40 +730,30 @@ function downscaleHQ(img, targetW, targetH) {
     const newW = Math.floor(curW / 2);
     const newH = Math.floor(curH / 2);
     const tmp = document.createElement('canvas');
-    tmp.width = newW;
-    tmp.height = newH;
+    tmp.width = newW; tmp.height = newH;
     const tctx = tmp.getContext('2d');
     tctx.imageSmoothingEnabled = true;
     tctx.imageSmoothingQuality = 'high';
     tctx.drawImage(curSrc, 0, 0, newW, newH);
-    curSrc = tmp;
-    curW = newW;
-    curH = newH;
+    curSrc = tmp; curW = newW; curH = newH;
   }
   const out = document.createElement('canvas');
-  out.width = targetW;
-  out.height = targetH;
+  out.width = targetW; out.height = targetH;
   const ctx = out.getContext('2d');
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(curSrc, 0, 0, targetW, targetH);
   return out;
 }
-
-// Mild unsharp mask via 3x3 kernel. Kernel sums to 1 so brightness is preserved.
-// Recovers edge detail that would otherwise be smoothed away by the downscale.
 function sharpenImageData(imageData, amount) {
   const w = imageData.width, h = imageData.height;
   const src = new Uint8ClampedArray(imageData.data);
   const dst = imageData.data;
-  const c = 1 + 4 * amount;
-  const e = -amount;
+  const c = 1 + 4 * amount, e = -amount;
   for (let y = 0; y < h; y++) {
-    const ym1 = Math.max(0, y - 1);
-    const yp1 = Math.min(h - 1, y + 1);
+    const ym1 = Math.max(0, y - 1), yp1 = Math.min(h - 1, y + 1);
     for (let x = 0; x < w; x++) {
-      const xm1 = Math.max(0, x - 1);
-      const xp1 = Math.min(w - 1, x + 1);
+      const xm1 = Math.max(0, x - 1), xp1 = Math.min(w - 1, x + 1);
       const i = (y * w + x) * 4;
       for (let ch = 0; ch < 3; ch++) {
         const v = c * src[i + ch]
@@ -396,237 +767,612 @@ function sharpenImageData(imageData, amount) {
   }
 }
 
-function addColor(hex) {
-  const h = hex || hexInput.value.trim() || colorPicker.value;
-  const clean = h.startsWith('#') ? h : '#'+h;
-  if(!/^#[0-9A-Fa-f]{6}$/.test(clean)) return;
-  const upper = clean.toUpperCase();
-  if(palette.includes(upper)) return;
-  palette.push(upper);
-  renderPalette();
-  hexInput.value = '';
+// Apply brightness/contrast/saturation/hue in-place on an ImageData buffer.
+// brightness: -50..50 (additive), contrast: -50..50, saturation: -100..100, hue: -180..180 (degrees)
+function applyAdjustments(imageData, br, ct, sat, hue) {
+  if (br === 0 && ct === 0 && sat === 0 && hue === 0) return;
+  const data = imageData.data;
+  const N = data.length;
+  const ctF = (ct + 100) / 100;        // 0.5 .. 1.5
+  const ctOff = 128 * (1 - ctF);
+  const satF = (sat + 100) / 100;      // 0 .. 2
+  const cosH = Math.cos(hue * Math.PI / 180);
+  const sinH = Math.sin(hue * Math.PI / 180);
+  // Hue rotation matrix coefficients (luma-preserving)
+  const m11 = 0.213 + cosH*0.787 - sinH*0.213;
+  const m12 = 0.715 - cosH*0.715 - sinH*0.715;
+  const m13 = 0.072 - cosH*0.072 + sinH*0.928;
+  const m21 = 0.213 - cosH*0.213 + sinH*0.143;
+  const m22 = 0.715 + cosH*0.285 + sinH*0.140;
+  const m23 = 0.072 - cosH*0.072 - sinH*0.283;
+  const m31 = 0.213 - cosH*0.213 - sinH*0.787;
+  const m32 = 0.715 - cosH*0.715 + sinH*0.715;
+  const m33 = 0.072 + cosH*0.928 + sinH*0.072;
+
+  for (let i = 0; i < N; i += 4) {
+    let r = data[i], g = data[i+1], b = data[i+2];
+    if (br !== 0) {
+      r += br * 2.55; g += br * 2.55; b += br * 2.55;
+    }
+    if (ct !== 0) {
+      r = r * ctF + ctOff;
+      g = g * ctF + ctOff;
+      b = b * ctF + ctOff;
+    }
+    if (hue !== 0) {
+      const nr = m11*r + m12*g + m13*b;
+      const ng = m21*r + m22*g + m23*b;
+      const nb = m31*r + m32*g + m33*b;
+      r = nr; g = ng; b = nb;
+    }
+    if (sat !== 0) {
+      const lum = 0.2126*r + 0.7152*g + 0.0722*b;
+      r = lum + (r - lum) * satF;
+      g = lum + (g - lum) * satF;
+      b = lum + (b - lum) * satF;
+    }
+    data[i]   = r < 0 ? 0 : r > 255 ? 255 : r;
+    data[i+1] = g < 0 ? 0 : g > 255 ? 255 : g;
+    data[i+2] = b < 0 ? 0 : b > 255 ? 255 : b;
+  }
 }
 
-function removeColor(i) {
-  palette.splice(i, 1);
-  renderPalette();
+/* ---------- Match pipeline ---------- */
+// Build LAB representation of palette + chroma cache
+function preparePalette(pal) {
+  const palRgb = pal.map(c => hexToRgb(c.hex));
+  const palLab = palRgb.map(rgb => rgbToLab(rgb[0], rgb[1], rgb[2]));
+  const palChroma = palLab.map(lab => Math.sqrt(lab[1]*lab[1] + lab[2]*lab[2]));
+  return {palRgb, palLab, palChroma};
 }
 
-function clearColors() { palette = []; renderPalette(); }
-
-function loadPreset(name) {
-  palette = [...PRESETS[name]];
-  renderPalette();
+// Returns adjusted-LAB grid + bg mask; uses skin-tone push and chroma-aware bg detection
+function buildTargetLab(raw, gs, bgThresh, skinPush) {
+  const warmShift = skinPush * 7;
+  const chromaScale = 1 + skinPush * 1.0;
+  const bgL = 100 - bgThresh * 0.4;
+  const bgChromaMax = 5;
+  const targetLab = new Array(gs * gs);
+  const isBg = new Uint8Array(gs * gs);
+  for (let r = 0; r < gs; r++) {
+    for (let c = 0; c < gs; c++) {
+      const idx = (r * gs + c) * 4;
+      const a = raw[idx + 3];
+      const k = r * gs + c;
+      if (a < 40) { isBg[k] = 1; targetLab[k] = null; continue; }
+      const lab = rgbToLab(raw[idx], raw[idx+1], raw[idx+2]);
+      const rawChroma = Math.sqrt(lab[1]*lab[1] + lab[2]*lab[2]);
+      if (bgThresh > 0 && lab[0] > bgL && rawChroma < bgChromaMax) {
+        isBg[k] = 1; targetLab[k] = null; continue;
+      }
+      if (skinPush > 0) {
+        if (lab[1] > 0) lab[1] += warmShift;
+        if (lab[2] > 0) lab[2] += warmShift;
+        lab[1] *= chromaScale;
+        lab[2] *= chromaScale;
+      }
+      targetLab[k] = lab;
+    }
+  }
+  return {targetLab, isBg};
 }
 
-function renderPalette() {
-  const list = document.getElementById('colorList');
-  list.innerHTML = '';
-  palette.forEach((hex, i) => {
-    const chip = document.createElement('div');
-    chip.className = 'chip';
-    chip.style.background = hex;
-    chip.title = hex;
-    chip.innerHTML = `<div class="del" onclick="removeColor(${i})">×</div>`;
-    list.appendChild(chip);
-  });
-  document.getElementById('colorCount').textContent = palette.length + ' colors';
+// Find best palette match for one LAB color (with chroma-aware penalty)
+function bestMatch(lab, palLab, palChroma, distFn) {
+  const pxChroma = Math.sqrt(lab[1]*lab[1] + lab[2]*lab[2]);
+  let best = 0, bestD = Infinity;
+  for (let p = 0; p < palLab.length; p++) {
+    let d = distFn(lab, palLab[p]);
+    if (pxChroma > 5 && palChroma[p] < 4) {
+      d *= 1 + Math.min((pxChroma - palChroma[p]) / 4, 2);
+    }
+    if (d < bestD) { bestD = d; best = p; }
+  }
+  return best;
+}
+
+// Floyd-Steinberg dithering in LAB space
+function matchWithDither(targetLab, isBg, gs, palLab, palChroma, distFn) {
+  const out = new Array(gs * gs);
+  // Mutable LAB buffer (we'll add error to it as we go)
+  const buf = targetLab.map(l => l ? l.slice() : null);
+  const addErr = (k, eL, ea, eb, w) => {
+    if (k < 0 || k >= buf.length) return;
+    const lab = buf[k];
+    if (!lab) return;
+    lab[0] += eL * w;
+    lab[1] += ea * w;
+    lab[2] += eb * w;
+  };
+  for (let r = 0; r < gs; r++) {
+    for (let c = 0; c < gs; c++) {
+      const k = r * gs + c;
+      if (isBg[k]) { out[k] = 0; continue; }
+      const lab = buf[k];
+      const p = bestMatch(lab, palLab, palChroma, distFn);
+      out[k] = p + 1;
+      const chosen = palLab[p];
+      const eL = lab[0] - chosen[0];
+      const ea = lab[1] - chosen[1];
+      const eb = lab[2] - chosen[2];
+      // FS weights
+      if (c + 1 < gs) addErr(r * gs + (c + 1), eL, ea, eb, 7/16);
+      if (r + 1 < gs) {
+        if (c > 0)        addErr((r+1) * gs + (c-1), eL, ea, eb, 3/16);
+                          addErr((r+1) * gs + c,     eL, ea, eb, 5/16);
+        if (c + 1 < gs)   addErr((r+1) * gs + (c+1), eL, ea, eb, 1/16);
+      }
+    }
+  }
+  return out;
+}
+
+// Stock-limited matching: assign best then iteratively swap overflow pixels to next best
+function matchWithLimits(targetLab, isBg, gs, palLab, palChroma, qtys, distFn) {
+  const N = gs * gs, K = palLab.length;
+  const out = new Array(N);
+  const used = new Array(K).fill(0);
+  // Per-pixel sorted candidates (we cap to top-6 to save memory)
+  const TOPK = Math.min(K, 6);
+  const candIdx = new Array(N);
+  const candDst = new Array(N);
+  for (let k = 0; k < N; k++) {
+    if (isBg[k]) { out[k] = 0; continue; }
+    const lab = targetLab[k];
+    const all = [];
+    const pxChroma = Math.sqrt(lab[1]*lab[1] + lab[2]*lab[2]);
+    for (let p = 0; p < K; p++) {
+      let d = distFn(lab, palLab[p]);
+      if (pxChroma > 5 && palChroma[p] < 4) {
+        d *= 1 + Math.min((pxChroma - palChroma[p]) / 4, 2);
+      }
+      all.push({p, d});
+    }
+    all.sort((a, b) => a.d - b.d);
+    const top = all.slice(0, TOPK);
+    candIdx[k] = top.map(x => x.p);
+    candDst[k] = top.map(x => x.d);
+    out[k] = candIdx[k][0];
+    used[out[k]]++;
+  }
+  // Iteratively swap overflowed pixels to their next best with available stock
+  let safety = 30;
+  while (safety-- > 0) {
+    let overK = -1, overAmount = 0;
+    for (let p = 0; p < K; p++) {
+      if (used[p] > qtys[p] && (used[p] - qtys[p]) > overAmount) {
+        overAmount = used[p] - qtys[p];
+        overK = p;
+      }
+    }
+    if (overK < 0) break;
+    const swaps = [];
+    for (let k = 0; k < N; k++) {
+      if (out[k] !== overK) continue;
+      const idxs = candIdx[k], dsts = candDst[k];
+      let nextP = -1, nextD = Infinity;
+      for (let j = 1; j < idxs.length; j++) {
+        if (used[idxs[j]] < qtys[idxs[j]]) {
+          nextP = idxs[j]; nextD = dsts[j]; break;
+        }
+      }
+      if (nextP >= 0) swaps.push({k, nextP, cost: nextD - dsts[0]});
+    }
+    if (swaps.length === 0) break;
+    swaps.sort((a, b) => a.cost - b.cost);
+    let toMove = overAmount;
+    for (let i = 0; i < swaps.length && toMove > 0; i++) {
+      const sw = swaps[i];
+      if (used[sw.nextP] >= qtys[sw.nextP]) continue;
+      out[sw.k] = sw.nextP;
+      used[overK]--;
+      used[sw.nextP]++;
+      toMove--;
+    }
+  }
+  // Convert to 1-based grid values
+  for (let k = 0; k < N; k++) {
+    if (!isBg[k]) out[k] = out[k] + 1;
+  }
+  return out;
+}
+
+/* ---------- Process ---------- */
+function getAdjustments() {
+  return {
+    br: +document.getElementById('adjBright').value,
+    ct: +document.getElementById('adjContrast').value,
+    sat: +document.getElementById('adjSat').value,
+    hue: +document.getElementById('adjHue').value,
+    skinPush: +document.getElementById('skinPush').value / 100,
+    bgThresh: +document.getElementById('bgThresh').value,
+  };
 }
 
 function process() {
   if(!imgData) { setStatus('Please upload an image first.'); return; }
   if(palette.length < 2) { setStatus('Add at least 2 colors to the palette.'); return; }
-
   setStatus('Processing…');
   setTimeout(() => {
     try {
       const gs = +document.getElementById('gridSize').value;
-      const bgThresh = +document.getElementById('bgThresh').value;
+      const adj = getAdjustments();
+      const useDither = document.getElementById('ditherChk').checked;
+      const accurate = document.getElementById('accurateMatchChk').checked;
+      const stockOn = document.getElementById('stockLimitChk').checked;
+      const distFn = accurate ? deltaE2000 : labDistSq;
 
-      // Multi-pass downscale + mild unsharp mask. Together these preserve fine
-      // features (mouths, eyes) far better than a single browser-default downscale.
       const off = downscaleHQ(imgData, gs, gs);
       const ctx = off.getContext('2d');
       const imageDataObj = ctx.getImageData(0, 0, gs, gs);
+      applyAdjustments(imageDataObj, adj.br, adj.ct, adj.sat, adj.hue);
       sharpenImageData(imageDataObj, 0.45);
       const raw = imageDataObj.data;
 
-      const palRgb = palette.map(hexToRgb);
-      const palLab = palRgb.map(rgb => rgbToLab(rgb[0], rgb[1], rgb[2]));
-      // Pre-compute palette chroma so we can penalize neutral palette colors when
-      // the input pixel has noticeable color cast (rescues sea/sky from snapping to gray).
-      const palChroma = palLab.map(lab => Math.sqrt(lab[1]*lab[1] + lab[2]*lab[2]));
+      const {targetLab, isBg} = buildTargetLab(raw, gs, adj.bgThresh, adj.skinPush);
+      const {palLab, palChroma} = preparePalette(palette);
 
-      // Skin tone boost: shift WARM-leaning pixels further toward warm (a+ = red, b+ = yellow)
-      // and scale chroma away from neutral for ALL pixels. The conditional warm shift means
-      // cool things (sky/sea) keep their cool cast — only warm things get warmer.
-      const skinPush = +document.getElementById('skinPush').value / 100;
-      const warmShift = skinPush * 7;       // 0..7 — only applied to a/b > 0
-      const chromaScale = 1 + skinPush * 1.0; // 1.0..2.0 — applied to all
-
-      // Background snap: only treat pixel as background if it's BOTH very pale AND nearly
-      // neutral. Prevents pale-blue skies from being snapped to white when bg threshold > 0.
-      const bgL = 100 - bgThresh * 0.4;     // L cutoff: at threshold 30, L > 88 → bg-eligible
-      const bgChromaMax = 5;                // chroma must also be < 5
-
-      grid = new Array(gs).fill(null).map(() => new Array(gs).fill(0));
-      colors = palette.slice();
-
-      for(let r=0; r<gs; r++) {
-        for(let c=0; c<gs; c++) {
-          const idx = (r*gs+c)*4;
-          const a = raw[idx+3];
-          if(a < 40) { grid[r][c] = 0; continue; }
-          const pr = raw[idx], pg = raw[idx+1], pb = raw[idx+2];
-          const lab = rgbToLab(pr, pg, pb);
-          const rawChroma = Math.sqrt(lab[1]*lab[1] + lab[2]*lab[2]);
-          if(bgThresh > 0 && lab[0] > bgL && rawChroma < bgChromaMax) {
-            grid[r][c] = 0; continue;
-          }
-          if(skinPush > 0) {
-            if(lab[1] > 0) lab[1] += warmShift;
-            if(lab[2] > 0) lab[2] += warmShift;
-            lab[1] *= chromaScale;
-            lab[2] *= chromaScale;
-          }
-          const pxChroma = Math.sqrt(lab[1]*lab[1] + lab[2]*lab[2]);
-          let best = 0, bestD = Infinity;
-          for(let p=0; p<palLab.length; p++) {
-            let d = labDist(lab, palLab[p]);
-            // Chroma-aware penalty: if the pixel has clear color, penalize matching it
-            // to a near-neutral palette color. This is what stops sea/sky → gray.
-            if(pxChroma > 5 && palChroma[p] < 4) {
-              d *= 1 + Math.min((pxChroma - palChroma[p]) / 4, 2);
-            }
-            if(d < bestD) { bestD = d; best = p; }
-          }
-          grid[r][c] = best + 1;
+      let flat;
+      if (stockOn) {
+        const qs = palette.map(c => c.qty != null ? c.qty : Infinity);
+        flat = matchWithLimits(targetLab, isBg, gs, palLab, palChroma, qs, distFn);
+      } else if (useDither) {
+        flat = matchWithDither(targetLab, isBg, gs, palLab, palChroma, distFn);
+      } else {
+        flat = new Array(gs * gs);
+        for (let k = 0; k < gs * gs; k++) {
+          if (isBg[k]) { flat[k] = 0; continue; }
+          flat[k] = bestMatch(targetLab[k], palLab, palChroma, distFn) + 1;
         }
       }
+      // Reshape to 2D
+      grid = new Array(gs);
+      for (let r = 0; r < gs; r++) {
+        grid[r] = new Array(gs);
+        for (let c = 0; c < gs; c++) grid[r][c] = flat[r * gs + c];
+      }
+      colors = palette.map(c => c.hex);
+      colorNames = palette.map(c => c.name || c.hex);
+      qtys = palette.map(c => c.qty);
+      warholGrids = null;
 
       cellSize = +document.getElementById('cellSize').value;
-      renderGrid();
-      buildLegend();
-      document.getElementById('emptyState').style.display = 'none';
-      document.getElementById('gridCanvas').style.display = 'block';
-      document.getElementById('downloadBtn').style.display = '';
-      document.getElementById('outputTitle').textContent = `${gs} × ${gs} grid — ${palette.length} colors`;
+      paintIdx = -1;
+      if (currentMode === 'warhol') currentMode = 'numbers';
+      finishRender(`${gs} × ${gs} grid — ${palette.length} colors`);
       setStatus('Done!');
-      setTimeout(()=>setStatus(''),2000);
-    } catch(e) { setStatus('Error: ' + e.message); }
+      setTimeout(() => setStatus(''), 1500);
+    } catch (e) {
+      console.error(e);
+      setStatus('Error: ' + e.message);
+    }
   }, 20);
 }
 
+function processWarhol() {
+  if(!imgData) { setStatus('Please upload an image first.'); return; }
+  setStatus('Processing 4 panels…');
+  setTimeout(() => {
+    try {
+      const gs = +document.getElementById('gridSize').value;
+      const adj = getAdjustments();
+      const useDither = document.getElementById('ditherChk').checked;
+      const accurate = document.getElementById('accurateMatchChk').checked;
+      const distFn = accurate ? deltaE2000 : labDistSq;
+
+      const off = downscaleHQ(imgData, gs, gs);
+      const ctx = off.getContext('2d');
+      const imageDataObj = ctx.getImageData(0, 0, gs, gs);
+      applyAdjustments(imageDataObj, adj.br, adj.ct, adj.sat, adj.hue);
+      sharpenImageData(imageDataObj, 0.45);
+      const {targetLab, isBg} = buildTargetLab(imageDataObj.data, gs, adj.bgThresh, adj.skinPush);
+
+      warholGrids = WARHOL_PANELS.map(pal => {
+        const {palLab, palChroma} = preparePalette(pal);
+        const flat = useDither
+          ? matchWithDither(targetLab.map(l => l ? l.slice() : null), isBg, gs, palLab, palChroma, distFn)
+          : (() => {
+              const f = new Array(gs * gs);
+              for (let k = 0; k < gs * gs; k++) {
+                if (isBg[k]) { f[k] = 0; continue; }
+                f[k] = bestMatch(targetLab[k], palLab, palChroma, distFn) + 1;
+              }
+              return f;
+            })();
+        const g = new Array(gs);
+        for (let r = 0; r < gs; r++) {
+          g[r] = new Array(gs);
+          for (let c = 0; c < gs; c++) g[r][c] = flat[r * gs + c];
+        }
+        return {grid: g, palette: pal};
+      });
+
+      grid = null; colors = []; colorNames = []; qtys = [];
+      currentMode = 'warhol';
+      ['numbers','blank','solution','studs','warhol'].forEach(id => {
+        document.getElementById('mBtn-'+id).classList.toggle('active', id === 'warhol');
+      });
+      cellSize = +document.getElementById('cellSize').value;
+      paintIdx = -1;
+      renderWarhol();
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('gridCanvas').style.display = 'block';
+      document.getElementById('downloadBtn').style.display = '';
+      document.getElementById('printBtn').style.display = '';
+      document.getElementById('outputTitle').textContent = `Warhol ×4 — ${gs} × ${gs} per panel`;
+      document.getElementById('legend').innerHTML = '';
+      document.getElementById('studReport').style.display = 'none';
+      document.getElementById('paintHint').style.display = 'none';
+      setStatus('Done!');
+      setTimeout(() => setStatus(''), 1500);
+    } catch (e) {
+      console.error(e);
+      setStatus('Error: ' + e.message);
+    }
+  }, 20);
+}
+
+function finishRender(title) {
+  renderGrid();
+  buildLegend();
+  buildStudReport();
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('gridCanvas').style.display = 'block';
+  document.getElementById('downloadBtn').style.display = '';
+  document.getElementById('printBtn').style.display = '';
+  document.getElementById('outputTitle').textContent = title;
+}
+
+/* ---------- Rendering ---------- */
 function renderGrid() {
-  if(!grid) return;
+  if (!grid) return;
   const gs = grid.length;
   const canvas = document.getElementById('gridCanvas');
   const cs = cellSize;
   canvas.width = gs * cs;
   canvas.height = gs * cs;
   const ctx = canvas.getContext('2d');
-
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   const palRgb = colors.map(hexToRgb);
   const mode = currentMode;
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  for(let r=0; r<gs; r++) {
-    for(let c=0; c<gs; c++) {
+  for (let r = 0; r < gs; r++) {
+    for (let c = 0; c < gs; c++) {
       const n = grid[r][c];
-      const x = c*cs, y = r*cs;
-
-      if(n === 0) {
+      const x = c * cs, y = r * cs;
+      if (n === 0) {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(x, y, cs, cs);
-        if(cs > 4) {
+        if (cs > 4 && mode !== 'studs') {
           ctx.strokeStyle = 'rgba(0,0,0,0.06)';
-          ctx.strokeRect(x+0.5, y+0.5, cs-1, cs-1);
+          ctx.strokeRect(x + 0.5, y + 0.5, cs - 1, cs - 1);
         }
         continue;
       }
-
-      const rgb = palRgb[n-1];
-      const hex = colors[n-1];
-
-      if(mode === 'solution') {
+      const rgb = palRgb[n - 1];
+      const hex = colors[n - 1];
+      if (mode === 'studs') {
+        // Solid base + circle stud + small highlight
+        ctx.fillStyle = darken(hex, 0.18);
+        ctx.fillRect(x, y, cs, cs);
         ctx.fillStyle = hex;
+        const cx = x + cs / 2, cy = y + cs / 2, rad = cs * 0.42;
+        ctx.beginPath();
+        ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+        ctx.fill();
+        if (cs >= 8) {
+          ctx.fillStyle = 'rgba(255,255,255,0.25)';
+          ctx.beginPath();
+          ctx.arc(cx - rad * 0.35, cy - rad * 0.35, rad * 0.28, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (mode === 'solution') {
+        ctx.fillStyle = hex;
+        ctx.fillRect(x, y, cs, cs);
+        if (cs > 4) {
+          ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+          ctx.strokeRect(x + 0.5, y + 0.5, cs - 1, cs - 1);
+        }
       } else {
         ctx.fillStyle = '#ffffff';
-      }
-      ctx.fillRect(x, y, cs, cs);
-
-      if(cs > 4) {
-        ctx.strokeStyle = mode==='solution' ? 'rgba(0,0,0,0.12)' : 'rgba(0,0,0,0.18)';
-        ctx.strokeRect(x+0.5, y+0.5, cs-1, cs-1);
-      }
-
-      if(mode === 'numbers' && cs >= 7) {
-        const lum = 0.299*rgb[0]+0.587*rgb[1]+0.114*rgb[2];
-        ctx.fillStyle = mode==='solution' ? (lum>128?'rgba(0,0,0,0.55)':'rgba(255,255,255,0.7)') : 'rgba(0,0,0,0.65)';
-        const fs = cs <= 9 ? cs*0.55 : cs*0.5;
-        ctx.font = `${Math.max(5,fs)}px system-ui,sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(n, x+cs/2, y+cs/2);
+        ctx.fillRect(x, y, cs, cs);
+        if (cs > 4) {
+          ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+          ctx.strokeRect(x + 0.5, y + 0.5, cs - 1, cs - 1);
+        }
+        if (mode === 'numbers' && cs >= 7) {
+          ctx.fillStyle = 'rgba(0,0,0,0.65)';
+          const fs = cs <= 9 ? cs * 0.55 : cs * 0.5;
+          ctx.font = `${Math.max(5, fs)}px system-ui,sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(n, x + cs / 2, y + cs / 2);
+        }
       }
     }
   }
-
-  setupHover(canvas, gs, cs);
+  setupCanvasInteraction(canvas, gs, cs);
 }
 
-function setupHover(canvas, gs, cs) {
+function darken(hex, amt) {
+  const [r, g, b] = hexToRgb(hex);
+  return rgbToHex(r * (1 - amt), g * (1 - amt), b * (1 - amt));
+}
+
+function renderWarhol() {
+  if (!warholGrids) return;
+  const gs = warholGrids[0].grid.length;
+  const canvas = document.getElementById('gridCanvas');
+  const cs = Math.max(3, Math.floor(cellSize * 0.5));   // smaller cells in 2x2
+  const gap = 6;
+  const panelSize = gs * cs;
+  canvas.width = panelSize * 2 + gap;
+  canvas.height = panelSize * 2 + gap;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  warholGrids.forEach((p, idx) => {
+    const ox = (idx % 2) * (panelSize + gap);
+    const oy = Math.floor(idx / 2) * (panelSize + gap);
+    const palRgb = p.palette.map(c => hexToRgb(c.hex));
+    for (let r = 0; r < gs; r++) {
+      for (let c = 0; c < gs; c++) {
+        const n = p.grid[r][c];
+        const x = ox + c * cs, y = oy + r * cs;
+        ctx.fillStyle = n === 0 ? '#ffffff' : p.palette[n - 1].hex;
+        ctx.fillRect(x, y, cs, cs);
+      }
+    }
+  });
+  // No interaction in warhol
+  canvas.onmousemove = canvas.onmouseleave = canvas.onclick = null;
+}
+
+function setupCanvasInteraction(canvas, gs, cs) {
   const tip = document.getElementById('tooltip');
   canvas.onmousemove = e => {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
-    const cx = Math.floor((e.clientX-rect.left)*scaleX/cs);
-    const cy = Math.floor((e.clientY-rect.top)*scaleY/cs);
-    if(cx<0||cx>=gs||cy<0||cy>=gs){tip.style.display='none';return;}
+    const cx = Math.floor((e.clientX - rect.left) * scaleX / cs);
+    const cy = Math.floor((e.clientY - rect.top) * scaleY / cs);
+    if (cx < 0 || cx >= gs || cy < 0 || cy >= gs) { tip.style.display = 'none'; return; }
     const n = grid[cy][cx];
-    if(n===0){tip.style.display='none';return;}
-    tip.style.display='block';
-    tip.style.left=(e.clientX+12)+'px';
-    tip.style.top=(e.clientY-24)+'px';
-    tip.textContent = `#${n} — ${colors[n-1]}`;
+    if (n === 0) { tip.style.display = 'none'; return; }
+    tip.style.display = 'block';
+    tip.style.left = (e.clientX + 12) + 'px';
+    tip.style.top = (e.clientY - 24) + 'px';
+    const name = colorNames[n - 1] || colors[n - 1];
+    tip.textContent = `#${n} — ${name} ${colors[n-1]}`;
   };
-  canvas.onmouseleave = () => { tip.style.display='none'; };
+  canvas.onmouseleave = () => { tip.style.display = 'none'; };
+  canvas.onclick = e => {
+    if (paintIdx < 0) return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const cx = Math.floor((e.clientX - rect.left) * scaleX / cs);
+    const cy = Math.floor((e.clientY - rect.top) * scaleY / cs);
+    if (cx < 0 || cx >= gs || cy < 0 || cy >= gs) return;
+    grid[cy][cx] = paintIdx + 1;
+    renderGrid();
+    buildStudReport();
+  };
+  canvas.style.cursor = paintIdx >= 0 ? 'crosshair' : 'default';
 }
 
+/* ---------- Legend & paint ---------- */
 function buildLegend() {
   const legend = document.getElementById('legend');
   legend.innerHTML = '';
+  const counts = tallyCounts();
   colors.forEach((hex, i) => {
     const chip = document.createElement('div');
-    chip.className = 'legend-chip';
-    chip.innerHTML = `<div class="legend-swatch" style="background:${hex}"></div><span><strong>${i+1}</strong> ${hex}</span>`;
+    chip.className = 'legend-chip' + (paintIdx === i ? ' selected' : '');
+    const name = colorNames[i] || hex;
+    const used = counts[i + 1] || 0;
+    const q = qtys[i];
+    let qHtml = '';
+    if (q != null && isFinite(q)) {
+      const low = used > q;
+      qHtml = ` <span class="${low ? 'legend-low' : ''}" style="font-size:10px">(${used}/${q})</span>`;
+    }
+    chip.innerHTML = `<div class="legend-swatch" style="background:${hex}"></div>` +
+                     `<span class="legend-name"><strong>${i + 1}</strong> ${name}${qHtml}</span>`;
+    chip.onclick = () => togglePaint(i);
     legend.appendChild(chip);
   });
 }
+function togglePaint(i) {
+  paintIdx = (paintIdx === i) ? -1 : i;
+  document.getElementById('paintHint').style.display = paintIdx >= 0 ? 'block' : 'none';
+  buildLegend();
+  if (grid) {
+    const canvas = document.getElementById('gridCanvas');
+    canvas.style.cursor = paintIdx >= 0 ? 'crosshair' : 'default';
+  }
+}
 
-function setMode(m) {
-  currentMode = m;
-  ['numbers','blank','solution'].forEach(id => {
-    document.getElementById('mBtn-'+id).classList.toggle('active', id===m);
+/* ---------- Stud count report ---------- */
+function tallyCounts() {
+  const counts = {};
+  if (!grid) return counts;
+  const gs = grid.length;
+  for (let r = 0; r < gs; r++) {
+    for (let c = 0; c < gs; c++) {
+      const n = grid[r][c];
+      counts[n] = (counts[n] || 0) + 1;
+    }
+  }
+  return counts;
+}
+function buildStudReport() {
+  if (!grid) {
+    document.getElementById('studReport').style.display = 'none';
+    return;
+  }
+  const counts = tallyCounts();
+  const total = colors.reduce((s, _, i) => s + (counts[i + 1] || 0), 0);
+  const tbl = document.getElementById('studTable');
+  let rows = '<thead><tr><th>#</th><th>Color</th><th class="num">Studs</th><th class="num">Stock</th><th class="num">%</th></tr></thead><tbody>';
+  const sorted = colors
+    .map((hex, i) => ({hex, name: colorNames[i] || hex, n: i + 1, count: counts[i + 1] || 0, qty: qtys[i]}))
+    .sort((a, b) => b.count - a.count);
+  sorted.forEach(row => {
+    const pct = total > 0 ? ((row.count / total) * 100).toFixed(1) : '0';
+    const low = row.qty != null && isFinite(row.qty) && row.count > row.qty;
+    const stockTxt = row.qty != null && isFinite(row.qty) ? row.qty : '—';
+    rows += `<tr class="${low ? 'row-low' : ''}">` +
+            `<td>${row.n}</td>` +
+            `<td><span class="swatch-sm" style="background:${row.hex}"></span>${row.name}</td>` +
+            `<td class="num">${row.count}</td>` +
+            `<td class="num">${stockTxt}${low ? ' ⚠' : ''}</td>` +
+            `<td class="num">${pct}%</td></tr>`;
   });
-  if(grid) renderGrid();
+  const bg = counts[0] || 0;
+  if (bg > 0) {
+    rows += `<tr style="color:#888"><td>—</td><td>(background)</td><td class="num">${bg}</td><td class="num">—</td><td class="num">${((bg/total)*100).toFixed(1)}%</td></tr>`;
+  }
+  rows += '</tbody>';
+  tbl.innerHTML = rows;
+  document.getElementById('studTotal').textContent = `${total} studs total`;
+  document.getElementById('studReport').style.display = 'block';
+}
+
+/* ---------- Mode switching ---------- */
+function setMode(m) {
+  if (m === 'warhol') {
+    processWarhol();
+    return;
+  }
+  currentMode = m;
+  ['numbers', 'blank', 'solution', 'studs', 'warhol'].forEach(id => {
+    document.getElementById('mBtn-' + id).classList.toggle('active', id === m);
+  });
+  if (warholGrids && grid === null) {
+    // Coming back from warhol — need to reprocess regular
+    process();
+    return;
+  }
+  if (grid) renderGrid();
 }
 
 function setStatus(msg) {
   document.getElementById('statusMsg').textContent = msg;
 }
-
 function downloadCanvas() {
   const canvas = document.getElementById('gridCanvas');
   const a = document.createElement('a');
-  a.download = `color-by-number-${currentMode}.png`;
+  a.download = `lego-pipeline-${currentMode}.png`;
   a.href = canvas.toDataURL('image/png');
   a.click();
 }
+function printInstructions() {
+  window.print();
+}
 
-// ---------- Square crop ----------
+/* ---------- Crop ---------- */
 const cropState = { img:null, cw:0, ch:0, scale:1, bx:0, by:0, bs:0 };
 
 function openCropModal(img) {
@@ -637,24 +1383,17 @@ function openCropModal(img) {
   const ratio = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
   const dw = Math.round(img.naturalWidth * ratio);
   const dh = Math.round(img.naturalHeight * ratio);
-  canvas.width = dw;
-  canvas.height = dh;
+  canvas.width = dw; canvas.height = dh;
   ctx.drawImage(img, 0, 0, dw, dh);
-
   cropState.img = img;
-  cropState.cw = dw;
-  cropState.ch = dh;
-  cropState.scale = ratio;
-
+  cropState.cw = dw; cropState.ch = dh; cropState.scale = ratio;
   const s = Math.min(dw, dh);
   cropState.bs = s;
   cropState.bx = Math.round((dw - s) / 2);
   cropState.by = Math.round((dh - s) / 2);
-
   updateCropBox();
   document.getElementById('cropModal').classList.add('active');
 }
-
 function updateCropBox() {
   const box = document.getElementById('cropBox');
   box.style.left = cropState.bx + 'px';
@@ -662,117 +1401,90 @@ function updateCropBox() {
   box.style.width = cropState.bs + 'px';
   box.style.height = cropState.bs + 'px';
 }
-
 function applyCrop() {
-  if(!cropState.img) { closeCropModal(); return; }
+  if (!cropState.img) { closeCropModal(); return; }
   const sx = cropState.bx / cropState.scale;
   const sy = cropState.by / cropState.scale;
   const ss = cropState.bs / cropState.scale;
-
   const out = document.createElement('canvas');
-  out.width = Math.round(ss);
-  out.height = Math.round(ss);
+  out.width = Math.round(ss); out.height = Math.round(ss);
   const ctx = out.getContext('2d');
   ctx.drawImage(cropState.img, sx, sy, ss, ss, 0, 0, out.width, out.height);
-
   const dataUrl = out.toDataURL('image/png');
   const newImg = new Image();
   newImg.onload = () => {
     imgData = newImg;
     const t = document.getElementById('thumb');
-    t.src = dataUrl;
-    t.style.display = 'block';
+    t.src = dataUrl; t.style.display = 'block';
     document.querySelector('.upload-zone strong').textContent = 'Image cropped';
     document.getElementById('recropBtn').style.display = '';
   };
   newImg.src = dataUrl;
-
   closeCropModal();
 }
-
 function cancelCrop() {
-  if(originalImg) imgData = originalImg;
+  if (originalImg) imgData = originalImg;
   closeCropModal();
 }
-
 function closeCropModal() {
   document.getElementById('cropModal').classList.remove('active');
 }
-
 function reopenCrop() {
-  if(originalImg) openCropModal(originalImg);
+  if (originalImg) openCropModal(originalImg);
 }
-
 (function setupCropDrag() {
   const box = document.getElementById('cropBox');
-  const stage = document.getElementById('cropStage');
   let dragging = null;
-
   const startDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     const cls = e.target.classList;
     const handle = ['nw','ne','sw','se'].find(h => cls.contains(h));
     dragging = {
       type: handle || 'move',
-      startX: e.clientX,
-      startY: e.clientY,
-      bx: cropState.bx,
-      by: cropState.by,
-      bs: cropState.bs
+      startX: e.clientX, startY: e.clientY,
+      bx: cropState.bx, by: cropState.by, bs: cropState.bs
     };
-    if(box.setPointerCapture && e.pointerId != null) {
+    if (box.setPointerCapture && e.pointerId != null) {
       try { box.setPointerCapture(e.pointerId); } catch(_) {}
     }
   };
-
   box.addEventListener('pointerdown', startDrag);
-
   document.addEventListener('pointermove', e => {
-    if(!dragging) return;
-    const dx = e.clientX - dragging.startX;
-    const dy = e.clientY - dragging.startY;
-    const cw = cropState.cw, ch = cropState.ch;
-    const minS = 20;
-
-    if(dragging.type === 'move') {
+    if (!dragging) return;
+    const dx = e.clientX - dragging.startX, dy = e.clientY - dragging.startY;
+    const cw = cropState.cw, ch = cropState.ch, minS = 20;
+    if (dragging.type === 'move') {
       let nx = Math.max(0, Math.min(cw - dragging.bs, dragging.bx + dx));
       let ny = Math.max(0, Math.min(ch - dragging.bs, dragging.by + dy));
       cropState.bx = nx; cropState.by = ny;
     } else {
       let delta;
-      if(dragging.type === 'se') delta = Math.max(dx, dy);
-      else if(dragging.type === 'nw') delta = Math.max(-dx, -dy);
-      else if(dragging.type === 'ne') delta = Math.max(dx, -dy);
-      else delta = Math.max(-dx, dy); // sw
-
+      if (dragging.type === 'se') delta = Math.max(dx, dy);
+      else if (dragging.type === 'nw') delta = Math.max(-dx, -dy);
+      else if (dragging.type === 'ne') delta = Math.max(dx, -dy);
+      else delta = Math.max(-dx, dy);
       let ns = Math.max(minS, dragging.bs + delta);
       let nx = dragging.bx, ny = dragging.by;
-
-      if(dragging.type === 'se') {
+      if (dragging.type === 'se') {
         ns = Math.min(ns, cw - dragging.bx, ch - dragging.by);
-      } else if(dragging.type === 'nw') {
+      } else if (dragging.type === 'nw') {
         const brx = dragging.bx + dragging.bs;
         const bry = dragging.by + dragging.bs;
         ns = Math.min(ns, brx, bry);
-        nx = brx - ns;
-        ny = bry - ns;
-      } else if(dragging.type === 'ne') {
+        nx = brx - ns; ny = bry - ns;
+      } else if (dragging.type === 'ne') {
         const bly = dragging.by + dragging.bs;
         ns = Math.min(ns, cw - dragging.bx, bly);
         ny = bly - ns;
-      } else { // sw
+      } else {
         const trx = dragging.bx + dragging.bs;
         ns = Math.min(ns, trx, ch - dragging.by);
         nx = trx - ns;
       }
-
       cropState.bx = nx; cropState.by = ny; cropState.bs = ns;
     }
-
     updateCropBox();
   });
-
   document.addEventListener('pointerup', () => { dragging = null; });
 })();
 
