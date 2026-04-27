@@ -143,6 +143,22 @@ input[type=color]{width:40px;height:32px;padding:2px;border:0.5px solid rgba(0,0
     </div>
   </div>
 
+  <div class="field">
+    <label>Background color</label>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="bgColorSel" onchange="onBgChange()" style="flex:1">
+        <option value="#000000" selected>Black (frame)</option>
+        <option value="#FFFFFF">White</option>
+        <option value="#3C3C3C">Dark gray</option>
+        <option value="#787878">Gray</option>
+        <option value="#B4B4B4">Light gray</option>
+        <option value="custom">Custom…</option>
+      </select>
+      <input type="color" id="bgColorCustom" value="#000000" onchange="onBgChange()" style="display:none">
+    </div>
+    <span class="hint">Affects studs and solution views</span>
+  </div>
+
   <hr class="section-divider">
 
   <div class="field">
@@ -266,14 +282,15 @@ input[type=color]{width:40px;height:32px;padding:2px;border:0.5px solid rgba(0,0
       <button class="mode-btn" id="mBtn-blank" onclick="setMode('blank')">Blank</button>
       <button class="mode-btn" id="mBtn-solution" onclick="setMode('solution')">Solution</button>
       <button class="mode-btn" id="mBtn-studs" onclick="setMode('studs')">3D studs</button>
-      <button class="mode-btn" id="mBtn-warhol" onclick="setMode('warhol')">Warhol ×4</button>
     </div>
+    <button class="btn btn-sm" id="undoBtn" onclick="undoPaint()" style="display:none" title="Undo last paint stroke (⌘Z / Ctrl-Z)">↶ Undo</button>
     <button class="btn btn-sm" id="downloadBtn" onclick="downloadCanvas()" style="display:none">Save PNG</button>
     <button class="btn btn-sm" id="printBtn" onclick="printInstructions()" style="display:none">Print</button>
+    <button class="btn btn-sm" id="manualBtn" onclick="openBuildManual()" style="display:none" title="Open row-by-row build manual">Build manual</button>
   </div>
 
   <div id="paintHint" style="display:none">
-    <strong>Paint mode</strong> — click any cell on the grid to repaint it with the selected color. Click the same legend chip again to stop.
+    <strong>Paint mode</strong> — click or drag across cells to repaint them with the selected color. Click the same legend chip again to stop.
   </div>
 
   <div class="grid-scroll" id="gridScroll">
@@ -382,9 +399,78 @@ const LEGO_BASIC = [
   {hex:'#A0A5A9', name:'Lt Gray'},
 ];
 
+// LEGO Pick-A-Brick / store wall — 64 colors. Items 55–64 are translucent.
+const LEGO_STORE64 = [
+  {hex:'#FFFFFF', name:'01 White'},
+  {hex:'#D2B48C', name:'02 Tan'},
+  {hex:'#C8A078', name:'03 Nougat'},
+  {hex:'#0055B9', name:'04 Blue'},
+  {hex:'#F5D700', name:'05 Yellow'},
+  {hex:'#000000', name:'06 Black'},
+  {hex:'#00963C', name:'07 Green'},
+  {hex:'#00B400', name:'08 Bright Green'},
+  {hex:'#A05500', name:'09 Dark Orange'},
+  {hex:'#64B4E6', name:'10 Medium Blue'},
+  {hex:'#F58200', name:'11 Orange'},
+  {hex:'#009696', name:'12 Dark Turquoise'},
+  {hex:'#B4E600', name:'13 Lime'},
+  {hex:'#D2006E', name:'14 Magenta'},
+  {hex:'#82AAD2', name:'15 Sand Blue'},
+  {hex:'#967850', name:'16 Dark Tan'},
+  {hex:'#003C8C', name:'17 Dark Blue'},
+  {hex:'#006428', name:'18 Dark Green'},
+  {hex:'#505050', name:'19 Pearl Dark Gray'},
+  {hex:'#78A082', name:'20 Sand Green'},
+  {hex:'#FFB400', name:'21 Flame Yellow'},
+  {hex:'#643214', name:'22 Red Brown'},
+  {hex:'#B4B4B4', name:'23 Light Blue Gray'},
+  {hex:'#787878', name:'24 Dark Blue Gray'},
+  {hex:'#96DCFF', name:'25 Bright Light Blue'},
+  {hex:'#C83264', name:'26 Dark Pink'},
+  {hex:'#FF96C8', name:'27 Bright Pink'},
+  {hex:'#FFF096', name:'28 Cool Yellow'},
+  {hex:'#5A2878', name:'29 Dark Purple'},
+  {hex:'#E6B48C', name:'30 Light Nougat'},
+  {hex:'#C80000', name:'31 Red'},
+  {hex:'#BEA05A', name:'32 Pearl Gold'},
+  {hex:'#3C1E0A', name:'33 Dark Brown'},
+  {hex:'#B48C5A', name:'34 Medium Nougat'},
+  {hex:'#A0A0A0', name:'35 Flat Silver'},
+  {hex:'#0096D2', name:'36 Dark Azure'},
+  {hex:'#50B4F0', name:'37 Medium Azure'},
+  {hex:'#BEA000', name:'38 Gold'},
+  {hex:'#B4F0E6', name:'39 Light Aqua'},
+  {hex:'#A08CC8', name:'40 Medium Lavender'},
+  {hex:'#C8B4DC', name:'41 Lavender'},
+  {hex:'#C8DC00', name:'42 Yellow Green'},
+  {hex:'#787850', name:'43 Olive Green'},
+  {hex:'#FF7878', name:'44 Coral'},
+  {hex:'#FFD2AA', name:'45 Very Light Nougat'},
+  {hex:'#8C50B4', name:'46 Purple'},
+  {hex:'#FFC878', name:'47 Apricot'},
+  {hex:'#FFAA8C', name:'48 Flesh'},
+  {hex:'#3C3C3C', name:'49 Black Gray'},
+  {hex:'#648C50', name:'50 Lotus Leaf Green'},
+  {hex:'#96D2E6', name:'51 Water Blue'},
+  {hex:'#FF6464', name:'52 Peach Red'},
+  {hex:'#8C0000', name:'53 Dark Red'},
+  {hex:'#968C82', name:'54 Mixed Lot'},
+  {hex:'#0000C8', name:'55 Trans Blue',        trans:true},
+  {hex:'#64C8FF', name:'56 Trans Light Blue',  trans:true},
+  {hex:'#96D2E6', name:'57 Trans Water Blue',  trans:true},
+  {hex:'#00C800', name:'58 Trans Green',       trans:true},
+  {hex:'#FFE600', name:'59 Trans Yellow',      trans:true},
+  {hex:'#FFFFFF', name:'60 Trans Clear',       trans:true},
+  {hex:'#FF96B4', name:'61 Trans Pink',        trans:true},
+  {hex:'#FF9600', name:'62 Trans Orange',      trans:true},
+  {hex:'#A064C8', name:'63 Trans Purple',      trans:true},
+  {hex:'#C80000', name:'64 Trans Red',         trans:true},
+];
+
 const PALETTES = {
-  lego20:    {label:'LEGO 20',         group:'LEGO',     colors: LEGO20},
-  lego8:     {label:'LEGO Basic 8',    group:'LEGO',     colors: LEGO_BASIC},
+  lego20:    {label:'LEGO 20',                  group:'LEGO',     colors: LEGO20},
+  lego8:     {label:'LEGO Basic 8',             group:'LEGO',     colors: LEGO_BASIC},
+  lego_store64:{label:'LEGO Pick-A-Brick (64)', group:'LEGO',     colors: LEGO_STORE64},
   standard:  {label:'Standard 16',     group:'Standard', colors: namedHexes(['#FFFFFF','#C0C0C0','#808080','#000000','#8B4513','#8B0000','#FF0000','#FF8C00','#FFD700','#228B22','#00FF00','#87CEEB','#00CED1','#4169E1','#8A2BE2','#FF1493'])},
   crayola:   {label:'Crayola 16',      group:'Standard', colors: namedHexes(['#EE4B2B','#FF7F00','#FFD700','#00A550','#0047AB','#8B008B','#FF69B4','#A52A2A','#000000','#FFFFFF','#808080','#C0C0C0','#8B4513','#FF8C00','#40E0D0','#98FB98'])},
   warm:      {label:'Warm tones',      group:'Mood',     colors: namedHexes(['#FF2400','#FF6600','#FF8C00','#FFA500','#FFD700','#FFEC8B','#FFDAB9','#E9967A','#CD5C5C','#B22222','#8B0000','#FF69B4','#FF1493','#C71585','#4B0000','#FFFFFF'])},
@@ -402,25 +488,19 @@ const PALETTES = {
   duo_blyel: {label:'Duo — Blue/Yel',  group:'Duo',      colors: [{hex:'#FFFFFF',name:'White'},{hex:'#0055BF',name:'Blue'},{hex:'#F2CD37',name:'Yellow'}]},
 };
 
-const WARHOL_PANELS = [
-  [{hex:'#FFFFFF',name:'White'},{hex:'#05131D',name:'Black'},{hex:'#C91A09',name:'Red'},{hex:'#F2CD37',name:'Yellow'}],
-  [{hex:'#FFFFFF',name:'White'},{hex:'#05131D',name:'Black'},{hex:'#0055BF',name:'Blue'},{hex:'#9FC3E9',name:'Lt Blue'}],
-  [{hex:'#FFFFFF',name:'White'},{hex:'#05131D',name:'Black'},{hex:'#FC97AC',name:'Pink'},{hex:'#A12B8E',name:'Magenta'}],
-  [{hex:'#FFFFFF',name:'White'},{hex:'#05131D',name:'Black'},{hex:'#237841',name:'Green'},{hex:'#BBE90B',name:'Lime'}],
-];
-
 /* ---------- State ---------- */
 let palette = [];
 let grid = null;
-let warholGrids = null;
 let colors = [];
 let colorNames = [];
+let transFlags = [];
 let qtys = [];
 let currentMode = 'numbers';
 let cellSize = 11;
 let imgData = null;
 let originalImg = null;
 let paintIdx = -1;
+let bgColor = '#000000';
 
 const colorPicker = document.getElementById('colorPicker');
 const hexInput = document.getElementById('hexInput');
@@ -458,7 +538,7 @@ function loadPresetFromSelect() {
 function loadPreset(key) {
   const p = PALETTES[key];
   if (!p) return;
-  palette = p.colors.map(c => ({hex: c.hex.toUpperCase(), name: c.name, qty: undefined}));
+  palette = p.colors.map(c => ({hex: c.hex.toUpperCase(), name: c.name, qty: undefined, trans: !!c.trans}));
   renderPalette();
   document.getElementById('presetSelect').value = key;
 }
@@ -473,8 +553,22 @@ hexInput.addEventListener('keydown', e => { if(e.key==='Enter') addColorBtn(); }
 cellSizeSlider.addEventListener('input', e => {
   cellSize = +e.target.value;
   document.getElementById('cellSizeOut').textContent = cellSize + 'px';
-  if(grid && currentMode !== 'warhol') renderGrid();
+  if(grid) renderGrid();
 });
+
+function onBgChange() {
+  const sel = document.getElementById('bgColorSel');
+  const custom = document.getElementById('bgColorCustom');
+  if (sel.value === 'custom') {
+    custom.style.display = 'inline-block';
+    bgColor = custom.value.toUpperCase();
+  } else {
+    custom.style.display = 'none';
+    bgColor = sel.value.toUpperCase();
+    custom.value = bgColor;
+  }
+  if (grid) renderGrid();
+}
 
 const adjBindings = ['adjBright','adjContrast','adjSat','adjHue','skinPush','bgThresh'];
 adjBindings.forEach(id => {
@@ -611,12 +705,13 @@ function addColorBtn() {
   addColor(v);
   hexInput.value = '';
 }
-function addColor(hex, name) {
+function addColor(hex, name, trans) {
   const clean = hex.startsWith('#') ? hex : '#'+hex;
   if(!/^#[0-9A-Fa-f]{6}$/.test(clean)) return;
   const upper = clean.toUpperCase();
-  if(palette.some(c => c.hex === upper)) return;
-  palette.push({hex: upper, name: name || upper, qty: undefined});
+  const isTrans = !!trans;
+  if(palette.some(c => c.hex === upper && !!c.trans === isTrans)) return;
+  palette.push({hex: upper, name: name || upper, qty: undefined, trans: isTrans});
   renderPalette();
 }
 function removeColor(i) {
@@ -640,8 +735,12 @@ function renderPalette() {
   palette.forEach((c, i) => {
     const wrap = document.createElement('div');
     wrap.className = 'chip' + (stockOn ? ' show-qty' : '');
+    const swatchStyle = c.trans
+      ? `background:${c.hex};background-image:linear-gradient(45deg,rgba(255,255,255,0.45) 25%,transparent 25%,transparent 50%,rgba(255,255,255,0.45) 50%,rgba(255,255,255,0.45) 75%,transparent 75%,transparent);background-size:8px 8px`
+      : `background:${c.hex}`;
+    const transTitle = c.trans ? ' (transparent — paint-only)' : '';
     wrap.innerHTML = `
-      <div class="swatch" style="background:${c.hex}" title="${c.hex}${c.name && c.name !== c.hex ? ' — '+c.name : ''}">
+      <div class="swatch" style="${swatchStyle}" title="${c.hex}${c.name && c.name !== c.hex ? ' — '+c.name : ''}${transTitle}">
         <div class="del" data-i="${i}">×</div>
       </div>
       <input class="qty" type="number" min="0" placeholder="∞" value="${c.qty != null ? c.qty : ''}" data-i="${i}">
@@ -690,7 +789,7 @@ function saveCurrentAsStored() {
   const name = prompt('Name this palette:', def);
   if (!name) return;
   const all = loadStoredAll();
-  all[name] = palette.map(c => ({hex: c.hex, name: c.name, qty: c.qty}));
+  all[name] = palette.map(c => ({hex: c.hex, name: c.name, qty: c.qty, trans: !!c.trans}));
   saveStoredAll(all);
   refreshStoredSelect();
   document.getElementById('storedSelect').value = name;
@@ -703,7 +802,7 @@ function loadStoredPalette() {
   const all = loadStoredAll();
   const list = all[name];
   if (!list) return;
-  palette = list.map(c => ({hex: c.hex, name: c.name || c.hex, qty: c.qty}));
+  palette = list.map(c => ({hex: c.hex, name: c.name || c.hex, qty: c.qty, trans: !!c.trans}));
   if (palette.some(c => c.qty != null)) {
     document.getElementById('stockLimitChk').checked = true;
   }
@@ -818,12 +917,17 @@ function applyAdjustments(imageData, br, ct, sat, hue) {
 }
 
 /* ---------- Match pipeline ---------- */
-// Build LAB representation of palette + chroma cache
+// Build LAB representation of palette + chroma cache.
+// palMatchable[p] === false means trans color (skipped during automatic matching;
+// still selectable via paint mode).
 function preparePalette(pal) {
   const palRgb = pal.map(c => hexToRgb(c.hex));
   const palLab = palRgb.map(rgb => rgbToLab(rgb[0], rgb[1], rgb[2]));
   const palChroma = palLab.map(lab => Math.sqrt(lab[1]*lab[1] + lab[2]*lab[2]));
-  return {palRgb, palLab, palChroma};
+  const palMatchable = pal.map(c => !c.trans);
+  // Fallback: if every entry is trans, allow all so we don't crash with no candidates.
+  if (!palMatchable.some(Boolean)) palMatchable.fill(true);
+  return {palRgb, palLab, palChroma, palMatchable};
 }
 
 // Returns adjusted-LAB grid + bg mask; uses skin-tone push and chroma-aware bg detection
@@ -857,11 +961,13 @@ function buildTargetLab(raw, gs, bgThresh, skinPush) {
   return {targetLab, isBg};
 }
 
-// Find best palette match for one LAB color (with chroma-aware penalty)
-function bestMatch(lab, palLab, palChroma, distFn) {
+// Find best palette match for one LAB color (with chroma-aware penalty).
+// palMatchable optional — when present, indices marked false are skipped.
+function bestMatch(lab, palLab, palChroma, distFn, palMatchable) {
   const pxChroma = Math.sqrt(lab[1]*lab[1] + lab[2]*lab[2]);
   let best = 0, bestD = Infinity;
   for (let p = 0; p < palLab.length; p++) {
+    if (palMatchable && !palMatchable[p]) continue;
     let d = distFn(lab, palLab[p]);
     if (pxChroma > 5 && palChroma[p] < 4) {
       d *= 1 + Math.min((pxChroma - palChroma[p]) / 4, 2);
@@ -872,7 +978,7 @@ function bestMatch(lab, palLab, palChroma, distFn) {
 }
 
 // Floyd-Steinberg dithering in LAB space
-function matchWithDither(targetLab, isBg, gs, palLab, palChroma, distFn) {
+function matchWithDither(targetLab, isBg, gs, palLab, palChroma, distFn, palMatchable) {
   const out = new Array(gs * gs);
   // Mutable LAB buffer (we'll add error to it as we go)
   const buf = targetLab.map(l => l ? l.slice() : null);
@@ -889,7 +995,7 @@ function matchWithDither(targetLab, isBg, gs, palLab, palChroma, distFn) {
       const k = r * gs + c;
       if (isBg[k]) { out[k] = 0; continue; }
       const lab = buf[k];
-      const p = bestMatch(lab, palLab, palChroma, distFn);
+      const p = bestMatch(lab, palLab, palChroma, distFn, palMatchable);
       out[k] = p + 1;
       const chosen = palLab[p];
       const eL = lab[0] - chosen[0];
@@ -908,7 +1014,7 @@ function matchWithDither(targetLab, isBg, gs, palLab, palChroma, distFn) {
 }
 
 // Stock-limited matching: assign best then iteratively swap overflow pixels to next best
-function matchWithLimits(targetLab, isBg, gs, palLab, palChroma, qtys, distFn) {
+function matchWithLimits(targetLab, isBg, gs, palLab, palChroma, qtys, distFn, palMatchable) {
   const N = gs * gs, K = palLab.length;
   const out = new Array(N);
   const used = new Array(K).fill(0);
@@ -922,6 +1028,7 @@ function matchWithLimits(targetLab, isBg, gs, palLab, palChroma, qtys, distFn) {
     const all = [];
     const pxChroma = Math.sqrt(lab[1]*lab[1] + lab[2]*lab[2]);
     for (let p = 0; p < K; p++) {
+      if (palMatchable && !palMatchable[p]) continue;
       let d = distFn(lab, palLab[p]);
       if (pxChroma > 5 && palChroma[p] < 4) {
         d *= 1 + Math.min((pxChroma - palChroma[p]) / 4, 2);
@@ -1010,19 +1117,19 @@ function process() {
       const raw = imageDataObj.data;
 
       const {targetLab, isBg} = buildTargetLab(raw, gs, adj.bgThresh, adj.skinPush);
-      const {palLab, palChroma} = preparePalette(palette);
+      const {palLab, palChroma, palMatchable} = preparePalette(palette);
 
       let flat;
       if (stockOn) {
         const qs = palette.map(c => c.qty != null ? c.qty : Infinity);
-        flat = matchWithLimits(targetLab, isBg, gs, palLab, palChroma, qs, distFn);
+        flat = matchWithLimits(targetLab, isBg, gs, palLab, palChroma, qs, distFn, palMatchable);
       } else if (useDither) {
-        flat = matchWithDither(targetLab, isBg, gs, palLab, palChroma, distFn);
+        flat = matchWithDither(targetLab, isBg, gs, palLab, palChroma, distFn, palMatchable);
       } else {
         flat = new Array(gs * gs);
         for (let k = 0; k < gs * gs; k++) {
           if (isBg[k]) { flat[k] = 0; continue; }
-          flat[k] = bestMatch(targetLab[k], palLab, palChroma, distFn) + 1;
+          flat[k] = bestMatch(targetLab[k], palLab, palChroma, distFn, palMatchable) + 1;
         }
       }
       // Reshape to 2D
@@ -1033,76 +1140,13 @@ function process() {
       }
       colors = palette.map(c => c.hex);
       colorNames = palette.map(c => c.name || c.hex);
+      transFlags = palette.map(c => !!c.trans);
       qtys = palette.map(c => c.qty);
-      warholGrids = null;
+      clearPaintHistory();
 
       cellSize = +document.getElementById('cellSize').value;
       paintIdx = -1;
-      if (currentMode === 'warhol') currentMode = 'numbers';
       finishRender(`${gs} × ${gs} grid — ${palette.length} colors`);
-      setStatus('Done!');
-      setTimeout(() => setStatus(''), 1500);
-    } catch (e) {
-      console.error(e);
-      setStatus('Error: ' + e.message);
-    }
-  }, 20);
-}
-
-function processWarhol() {
-  if(!imgData) { setStatus('Please upload an image first.'); return; }
-  setStatus('Processing 4 panels…');
-  setTimeout(() => {
-    try {
-      const gs = +document.getElementById('gridSize').value;
-      const adj = getAdjustments();
-      const useDither = document.getElementById('ditherChk').checked;
-      const accurate = document.getElementById('accurateMatchChk').checked;
-      const distFn = accurate ? deltaE2000 : labDistSq;
-
-      const off = downscaleHQ(imgData, gs, gs);
-      const ctx = off.getContext('2d');
-      const imageDataObj = ctx.getImageData(0, 0, gs, gs);
-      applyAdjustments(imageDataObj, adj.br, adj.ct, adj.sat, adj.hue);
-      sharpenImageData(imageDataObj, 0.45);
-      const {targetLab, isBg} = buildTargetLab(imageDataObj.data, gs, adj.bgThresh, adj.skinPush);
-
-      warholGrids = WARHOL_PANELS.map(pal => {
-        const {palLab, palChroma} = preparePalette(pal);
-        const flat = useDither
-          ? matchWithDither(targetLab.map(l => l ? l.slice() : null), isBg, gs, palLab, palChroma, distFn)
-          : (() => {
-              const f = new Array(gs * gs);
-              for (let k = 0; k < gs * gs; k++) {
-                if (isBg[k]) { f[k] = 0; continue; }
-                f[k] = bestMatch(targetLab[k], palLab, palChroma, distFn) + 1;
-              }
-              return f;
-            })();
-        const g = new Array(gs);
-        for (let r = 0; r < gs; r++) {
-          g[r] = new Array(gs);
-          for (let c = 0; c < gs; c++) g[r][c] = flat[r * gs + c];
-        }
-        return {grid: g, palette: pal};
-      });
-
-      grid = null; colors = []; colorNames = []; qtys = [];
-      currentMode = 'warhol';
-      ['numbers','blank','solution','studs','warhol'].forEach(id => {
-        document.getElementById('mBtn-'+id).classList.toggle('active', id === 'warhol');
-      });
-      cellSize = +document.getElementById('cellSize').value;
-      paintIdx = -1;
-      renderWarhol();
-      document.getElementById('emptyState').style.display = 'none';
-      document.getElementById('gridCanvas').style.display = 'block';
-      document.getElementById('downloadBtn').style.display = '';
-      document.getElementById('printBtn').style.display = '';
-      document.getElementById('outputTitle').textContent = `Warhol ×4 — ${gs} × ${gs} per panel`;
-      document.getElementById('legend').innerHTML = '';
-      document.getElementById('studReport').style.display = 'none';
-      document.getElementById('paintHint').style.display = 'none';
       setStatus('Done!');
       setTimeout(() => setStatus(''), 1500);
     } catch (e) {
@@ -1120,68 +1164,84 @@ function finishRender(title) {
   document.getElementById('gridCanvas').style.display = 'block';
   document.getElementById('downloadBtn').style.display = '';
   document.getElementById('printBtn').style.display = '';
+  document.getElementById('manualBtn').style.display = '';
   document.getElementById('outputTitle').textContent = title;
 }
 
 /* ---------- Rendering ---------- */
-function renderGrid() {
+// Paint the grid (or a sub-grid filtered by `visibleRows`) onto a canvas at any cell size.
+// `highlightRows` set: those rows get a yellow highlight ring (used in build manual).
+function paintGridToCanvas(canvas, cs, mode, opts) {
   if (!grid) return;
+  opts = opts || {};
   const gs = grid.length;
-  const canvas = document.getElementById('gridCanvas');
-  const cs = cellSize;
+  const visibleFromRow = opts.visibleFromRow != null ? opts.visibleFromRow : 0; // rows >= this are drawn
+  const highlightFromRow = opts.highlightFromRow != null ? opts.highlightFromRow : -1;
+  const highlightToRow = opts.highlightToRow != null ? opts.highlightToRow : -1;
   canvas.width = gs * cs;
   canvas.height = gs * cs;
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const palRgb = colors.map(hexToRgb);
-  const mode = currentMode;
+  const usesBg = (mode === 'studs' || mode === 'solution');
+  const cellBg = usesBg ? bgColor : '#FFFFFF';
+  ctx.fillStyle = cellBg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const bgIsDark = isDarkColor(cellBg);
+  const lightStroke = bgIsDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.06)';
+  const numStroke   = bgIsDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)';
+  const numColor    = bgIsDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)';
 
   for (let r = 0; r < gs; r++) {
+    const rowBuilt = r >= visibleFromRow;
     for (let c = 0; c < gs; c++) {
       const n = grid[r][c];
       const x = c * cs, y = r * cs;
-      if (n === 0) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(x, y, cs, cs);
+      if (!rowBuilt) {
+        // Unbuilt row — show empty plate
         if (cs > 4 && mode !== 'studs') {
-          ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+          ctx.strokeStyle = lightStroke;
           ctx.strokeRect(x + 0.5, y + 0.5, cs - 1, cs - 1);
         }
         continue;
       }
-      const rgb = palRgb[n - 1];
+      if (n === 0) {
+        if (cs > 4 && mode !== 'studs') {
+          ctx.strokeStyle = lightStroke;
+          ctx.strokeRect(x + 0.5, y + 0.5, cs - 1, cs - 1);
+        }
+        continue;
+      }
       const hex = colors[n - 1];
+      const isTrans = transFlags[n - 1];
       if (mode === 'studs') {
-        // Solid base + circle stud + small highlight
-        ctx.fillStyle = darken(hex, 0.18);
-        ctx.fillRect(x, y, cs, cs);
+        const cx = x + cs / 2, cy = y + cs / 2, rad = cs * 0.46;
+        if (isTrans) ctx.globalAlpha = 0.55;
         ctx.fillStyle = hex;
-        const cx = x + cs / 2, cy = y + cs / 2, rad = cs * 0.42;
         ctx.beginPath();
         ctx.arc(cx, cy, rad, 0, Math.PI * 2);
         ctx.fill();
-        if (cs >= 8) {
-          ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.globalAlpha = 1;
+        if (!isTrans && cs >= 8) {
+          ctx.fillStyle = 'rgba(255,255,255,0.22)';
           ctx.beginPath();
           ctx.arc(cx - rad * 0.35, cy - rad * 0.35, rad * 0.28, 0, Math.PI * 2);
           ctx.fill();
         }
       } else if (mode === 'solution') {
+        if (isTrans) ctx.globalAlpha = 0.6;
         ctx.fillStyle = hex;
         ctx.fillRect(x, y, cs, cs);
+        ctx.globalAlpha = 1;
         if (cs > 4) {
-          ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+          ctx.strokeStyle = bgIsDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.12)';
           ctx.strokeRect(x + 0.5, y + 0.5, cs - 1, cs - 1);
         }
       } else {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(x, y, cs, cs);
         if (cs > 4) {
-          ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+          ctx.strokeStyle = numStroke;
           ctx.strokeRect(x + 0.5, y + 0.5, cs - 1, cs - 1);
         }
         if (mode === 'numbers' && cs >= 7) {
-          ctx.fillStyle = 'rgba(0,0,0,0.65)';
+          ctx.fillStyle = numColor;
           const fs = cs <= 9 ? cs * 0.55 : cs * 0.5;
           ctx.font = `${Math.max(5, fs)}px system-ui,sans-serif`;
           ctx.textAlign = 'center';
@@ -1191,7 +1251,27 @@ function renderGrid() {
       }
     }
   }
-  setupCanvasInteraction(canvas, gs, cs);
+  // Highlight band for build manual (drawn on top)
+  if (highlightFromRow >= 0 && highlightToRow >= highlightFromRow) {
+    ctx.strokeStyle = '#F2CD37';
+    ctx.lineWidth = Math.max(2, Math.round(cs * 0.18));
+    const y = highlightFromRow * cs;
+    const h = (highlightToRow - highlightFromRow + 1) * cs;
+    ctx.strokeRect(ctx.lineWidth / 2, y + ctx.lineWidth / 2, gs * cs - ctx.lineWidth, h - ctx.lineWidth);
+  }
+}
+
+function renderGrid() {
+  if (!grid) return;
+  const canvas = document.getElementById('gridCanvas');
+  paintGridToCanvas(canvas, cellSize, currentMode);
+  setupCanvasInteraction(canvas, grid.length, cellSize);
+}
+
+function isDarkColor(hex) {
+  const [r, g, b] = hexToRgb(hex);
+  // Perceived luminance (Rec. 601)
+  return (0.299 * r + 0.587 * g + 0.114 * b) < 128;
 }
 
 function darken(hex, amt) {
@@ -1199,68 +1279,154 @@ function darken(hex, amt) {
   return rgbToHex(r * (1 - amt), g * (1 - amt), b * (1 - amt));
 }
 
-function renderWarhol() {
-  if (!warholGrids) return;
-  const gs = warholGrids[0].grid.length;
-  const canvas = document.getElementById('gridCanvas');
-  const cs = Math.max(3, Math.floor(cellSize * 0.5));   // smaller cells in 2x2
-  const gap = 6;
-  const panelSize = gs * cs;
-  canvas.width = panelSize * 2 + gap;
-  canvas.height = panelSize * 2 + gap;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+// Module-scope drag-paint state — attached once below
+let _painting = false;
+let _lastPainted = -1;
+let _paintCtx = null; // {canvas, gs, cs}
 
-  warholGrids.forEach((p, idx) => {
-    const ox = (idx % 2) * (panelSize + gap);
-    const oy = Math.floor(idx / 2) * (panelSize + gap);
-    const palRgb = p.palette.map(c => hexToRgb(c.hex));
-    for (let r = 0; r < gs; r++) {
-      for (let c = 0; c < gs; c++) {
-        const n = p.grid[r][c];
-        const x = ox + c * cs, y = oy + r * cs;
-        ctx.fillStyle = n === 0 ? '#ffffff' : p.palette[n - 1].hex;
-        ctx.fillRect(x, y, cs, cs);
-      }
-    }
+// Undo: each stroke is a Map<"r,c", prevValue>. Stack capped at 50.
+let paintHistory = [];
+let _currentStroke = null;
+const PAINT_HISTORY_MAX = 50;
+
+function startStroke() { _currentStroke = new Map(); }
+function recordChange(r, c, prev) {
+  if (!_currentStroke) return;
+  const k = r + ',' + c;
+  if (!_currentStroke.has(k)) _currentStroke.set(k, prev);
+}
+function commitStroke() {
+  if (_currentStroke && _currentStroke.size > 0) {
+    paintHistory.push(_currentStroke);
+    if (paintHistory.length > PAINT_HISTORY_MAX) paintHistory.shift();
+    updateUndoBtn();
+  }
+  _currentStroke = null;
+}
+function undoPaint() {
+  if (!grid || paintHistory.length === 0) return;
+  const stroke = paintHistory.pop();
+  for (const [k, prev] of stroke) {
+    const idx = k.indexOf(',');
+    const r = +k.slice(0, idx), c = +k.slice(idx + 1);
+    if (grid[r] && grid[r][c] !== undefined) grid[r][c] = prev;
+  }
+  renderGrid();
+  buildLegend();
+  buildStudReport();
+  updateUndoBtn();
+}
+function updateUndoBtn() {
+  const btn = document.getElementById('undoBtn');
+  if (!btn) return;
+  btn.style.display = (paintHistory.length > 0 && grid) ? '' : 'none';
+  btn.textContent = `↶ Undo (${paintHistory.length})`;
+}
+function clearPaintHistory() {
+  paintHistory = [];
+  _currentStroke = null;
+  updateUndoBtn();
+}
+
+// Batch legend + stud-report rebuilds during a drag — keeps counts live without per-pixel cost.
+let _statRebuildScheduled = false;
+function scheduleStatRebuild() {
+  if (_statRebuildScheduled) return;
+  _statRebuildScheduled = true;
+  requestAnimationFrame(() => {
+    _statRebuildScheduled = false;
+    buildLegend();
+    buildStudReport();
   });
-  // No interaction in warhol
-  canvas.onmousemove = canvas.onmouseleave = canvas.onclick = null;
 }
 
 function setupCanvasInteraction(canvas, gs, cs) {
   const tip = document.getElementById('tooltip');
-  canvas.onmousemove = e => {
+  _paintCtx = {canvas, gs, cs};
+
+  function cellFromEvent(e) {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     const cx = Math.floor((e.clientX - rect.left) * scaleX / cs);
     const cy = Math.floor((e.clientY - rect.top) * scaleY / cs);
-    if (cx < 0 || cx >= gs || cy < 0 || cy >= gs) { tip.style.display = 'none'; return; }
-    const n = grid[cy][cx];
-    if (n === 0) { tip.style.display = 'none'; return; }
-    tip.style.display = 'block';
-    tip.style.left = (e.clientX + 12) + 'px';
-    tip.style.top = (e.clientY - 24) + 'px';
-    const name = colorNames[n - 1] || colors[n - 1];
-    tip.textContent = `#${n} — ${name} ${colors[n-1]}`;
+    if (cx < 0 || cx >= gs || cy < 0 || cy >= gs) return null;
+    return {cx, cy};
+  }
+
+  canvas.onmousemove = e => {
+    const cell = cellFromEvent(e);
+    if (!cell) { tip.style.display = 'none'; }
+    else {
+      const n = grid[cell.cy][cell.cx];
+      if (n === 0) {
+        tip.style.display = 'none';
+      } else {
+        tip.style.display = 'block';
+        tip.style.left = (e.clientX + 12) + 'px';
+        tip.style.top = (e.clientY - 24) + 'px';
+        const name = colorNames[n - 1] || colors[n - 1];
+        const transTxt = transFlags[n - 1] ? ' (trans)' : '';
+        tip.textContent = `#${n} — ${name}${transTxt}`;
+      }
+    }
+    if (_painting && cell) {
+      const key = cell.cy * gs + cell.cx;
+      if (key !== _lastPainted) {
+        _lastPainted = key;
+        const target = paintIdx + 1;
+        if (grid[cell.cy][cell.cx] !== target) {
+          recordChange(cell.cy, cell.cx, grid[cell.cy][cell.cx]);
+          grid[cell.cy][cell.cx] = target;
+          renderGrid();
+          scheduleStatRebuild();
+        }
+      }
+    }
   };
   canvas.onmouseleave = () => { tip.style.display = 'none'; };
-  canvas.onclick = e => {
+  canvas.onmousedown = e => {
     if (paintIdx < 0) return;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const cx = Math.floor((e.clientX - rect.left) * scaleX / cs);
-    const cy = Math.floor((e.clientY - rect.top) * scaleY / cs);
-    if (cx < 0 || cx >= gs || cy < 0 || cy >= gs) return;
-    grid[cy][cx] = paintIdx + 1;
-    renderGrid();
-    buildStudReport();
+    const cell = cellFromEvent(e);
+    if (!cell) return;
+    _painting = true;
+    _lastPainted = cell.cy * gs + cell.cx;
+    startStroke();
+    const target = paintIdx + 1;
+    if (grid[cell.cy][cell.cx] !== target) {
+      recordChange(cell.cy, cell.cx, grid[cell.cy][cell.cx]);
+      grid[cell.cy][cell.cx] = target;
+      renderGrid();
+      scheduleStatRebuild();
+    }
+    e.preventDefault();
   };
+  canvas.onclick = null;
   canvas.style.cursor = paintIdx >= 0 ? 'crosshair' : 'default';
 }
+
+// Attach the global mouseup once so a stroke that ends outside the canvas still stops cleanly.
+document.addEventListener('mouseup', () => {
+  if (_painting) {
+    _painting = false;
+    _lastPainted = -1;
+    commitStroke();
+    buildLegend();
+    buildStudReport();
+  }
+});
+
+// Cmd/Ctrl-Z to undo paint. Skip when the user is typing in a form field.
+document.addEventListener('keydown', e => {
+  const tag = e.target && e.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+    if (paintHistory.length > 0) {
+      e.preventDefault();
+      undoPaint();
+    }
+  }
+});
 
 /* ---------- Legend & paint ---------- */
 function buildLegend() {
@@ -1278,8 +1444,14 @@ function buildLegend() {
       const low = used > q;
       qHtml = ` <span class="${low ? 'legend-low' : ''}" style="font-size:10px">(${used}/${q})</span>`;
     }
-    chip.innerHTML = `<div class="legend-swatch" style="background:${hex}"></div>` +
-                     `<span class="legend-name"><strong>${i + 1}</strong> ${name}${qHtml}</span>`;
+    const transBadge = transFlags[i]
+      ? ' <span style="font-size:9px;background:#e9e8ff;color:#5a4fd8;border-radius:3px;padding:1px 4px;font-weight:600" title="Transparent — paint-only, not used by automatic matching">T</span>'
+      : '';
+    const swatchStyle = transFlags[i]
+      ? `background:${hex};opacity:0.7;background-image:linear-gradient(45deg,rgba(255,255,255,0.4) 25%,transparent 25%,transparent 50%,rgba(255,255,255,0.4) 50%,rgba(255,255,255,0.4) 75%,transparent 75%,transparent);background-size:6px 6px`
+      : `background:${hex}`;
+    chip.innerHTML = `<div class="legend-swatch" style="${swatchStyle}"></div>` +
+                     `<span class="legend-name"><strong>${i + 1}</strong> ${name}${transBadge}${qHtml}</span>`;
     chip.onclick = () => togglePaint(i);
     legend.appendChild(chip);
   });
@@ -1315,24 +1487,20 @@ function buildStudReport() {
   const counts = tallyCounts();
   const total = colors.reduce((s, _, i) => s + (counts[i + 1] || 0), 0);
   const tbl = document.getElementById('studTable');
-  let rows = '<thead><tr><th>#</th><th>Color</th><th class="num">Studs</th><th class="num">Stock</th><th class="num">%</th></tr></thead><tbody>';
+  let rows = '<thead><tr><th>#</th><th>Color</th><th class="num">Studs</th></tr></thead><tbody>';
   const sorted = colors
     .map((hex, i) => ({hex, name: colorNames[i] || hex, n: i + 1, count: counts[i + 1] || 0, qty: qtys[i]}))
     .sort((a, b) => b.count - a.count);
   sorted.forEach(row => {
-    const pct = total > 0 ? ((row.count / total) * 100).toFixed(1) : '0';
     const low = row.qty != null && isFinite(row.qty) && row.count > row.qty;
-    const stockTxt = row.qty != null && isFinite(row.qty) ? row.qty : '—';
     rows += `<tr class="${low ? 'row-low' : ''}">` +
             `<td>${row.n}</td>` +
             `<td><span class="swatch-sm" style="background:${row.hex}"></span>${row.name}</td>` +
-            `<td class="num">${row.count}</td>` +
-            `<td class="num">${stockTxt}${low ? ' ⚠' : ''}</td>` +
-            `<td class="num">${pct}%</td></tr>`;
+            `<td class="num">${row.count}${low ? ' ⚠' : ''}</td></tr>`;
   });
   const bg = counts[0] || 0;
   if (bg > 0) {
-    rows += `<tr style="color:#888"><td>—</td><td>(background)</td><td class="num">${bg}</td><td class="num">—</td><td class="num">${((bg/total)*100).toFixed(1)}%</td></tr>`;
+    rows += `<tr style="color:#888"><td>—</td><td>(background)</td><td class="num">${bg}</td></tr>`;
   }
   rows += '</tbody>';
   tbl.innerHTML = rows;
@@ -1342,19 +1510,10 @@ function buildStudReport() {
 
 /* ---------- Mode switching ---------- */
 function setMode(m) {
-  if (m === 'warhol') {
-    processWarhol();
-    return;
-  }
   currentMode = m;
-  ['numbers', 'blank', 'solution', 'studs', 'warhol'].forEach(id => {
+  ['numbers', 'blank', 'solution', 'studs'].forEach(id => {
     document.getElementById('mBtn-' + id).classList.toggle('active', id === m);
   });
-  if (warholGrids && grid === null) {
-    // Coming back from warhol — need to reprocess regular
-    process();
-    return;
-  }
   if (grid) renderGrid();
 }
 
@@ -1362,14 +1521,238 @@ function setStatus(msg) {
   document.getElementById('statusMsg').textContent = msg;
 }
 function downloadCanvas() {
-  const canvas = document.getElementById('gridCanvas');
+  if (!grid) return;
+  // Render to an offscreen canvas at much higher resolution for printable output.
+  // Aim for ~4000px on the long side regardless of on-screen cell size.
+  const gs = grid.length;
+  const targetPx = 4000;
+  const exportCs = Math.max(cellSize, Math.round(targetPx / gs));
+  const off = document.createElement('canvas');
+  paintGridToCanvas(off, exportCs, currentMode);
   const a = document.createElement('a');
-  a.download = `lego-pipeline-${currentMode}.png`;
-  a.href = canvas.toDataURL('image/png');
+  a.download = `lego-pipeline-${currentMode}-${gs}x${gs}.png`;
+  a.href = off.toDataURL('image/png');
   a.click();
 }
 function printInstructions() {
   window.print();
+}
+
+/* ---------- Build manual (chunk by chunk) ---------- */
+// Build a row-by-row construction manual in a new window.
+// Each page = one row, working from bottom-up like the LEGO instruction PDFs.
+function openBuildManual() {
+  if (!grid) return;
+  const gs = grid.length;
+  // Default to 1 row per step, but combine for very large grids to keep page count sane.
+  const rowsPerStepDefault = gs >= 75 ? 2 : 1;
+  let rowsPerStep = rowsPerStepDefault;
+  const ans = prompt(`How many rows per step? (1 = one row per page, ${gs} steps)`, String(rowsPerStepDefault));
+  if (ans === null) return;
+  const n = parseInt(ans, 10);
+  if (isFinite(n) && n >= 1 && n <= gs) rowsPerStep = n;
+
+  setStatus('Generating manual…');
+  setTimeout(() => {
+    try {
+      const win = window.open('', '_blank');
+      if (!win) {
+        setStatus('Pop-up blocked. Allow pop-ups and try again.');
+        return;
+      }
+      const html = renderManualHtml(rowsPerStep);
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+      setStatus('Manual opened in new tab.');
+      setTimeout(() => setStatus(''), 2500);
+    } catch (e) {
+      console.error(e);
+      setStatus('Manual error: ' + e.message);
+    }
+  }, 20);
+}
+
+function renderManualHtml(rowsPerStep) {
+  const gs = grid.length;
+  // Build steps from bottom row up.
+  const steps = [];
+  for (let endRow = gs - 1; endRow >= 0; endRow -= rowsPerStep) {
+    const startRow = Math.max(0, endRow - rowsPerStep + 1);
+    steps.push({startRow, endRow});
+  }
+
+  // Choose cell sizes for the rendered images (data-URL embedded).
+  // Main image: ~700px on the long side. Thumb: ~200px.
+  const mainCs = Math.max(6, Math.round(700 / gs));
+  const thumbCs = Math.max(2, Math.round(200 / gs));
+
+  // Pre-render the final solution image (cover) and step images.
+  const mainMode = (currentMode === 'studs' || currentMode === 'solution') ? currentMode : 'studs';
+  const off = document.createElement('canvas');
+
+  paintGridToCanvas(off, mainCs, mainMode);
+  const finalImgUrl = off.toDataURL('image/png');
+
+  // Total parts summary
+  const counts = tallyCounts();
+  const totalStuds = colors.reduce((s, _, i) => s + (counts[i + 1] || 0), 0);
+
+  // Per-step rendering. For each step, draw main canvas with rows [startRow..gs-1] visible
+  // and the new band [startRow..endRow] highlighted; and a thumb (built so far, no highlight).
+  const stepsHtml = steps.map((step, idx) => {
+    const stepNum = idx + 1;
+    // Main: show built rows so far including this step, highlight new band.
+    paintGridToCanvas(off, mainCs, mainMode, {
+      visibleFromRow: step.startRow,
+      highlightFromRow: step.startRow,
+      highlightToRow: step.endRow,
+    });
+    const mainUrl = off.toDataURL('image/png');
+    // Thumb: same view but smaller (no highlight) — represents progress after step.
+    paintGridToCanvas(off, thumbCs, mainMode, {
+      visibleFromRow: step.startRow,
+    });
+    const thumbUrl = off.toDataURL('image/png');
+
+    // Parts list for this step
+    const stepCounts = {};
+    for (let r = step.startRow; r <= step.endRow; r++) {
+      for (let c = 0; c < gs; c++) {
+        const n = grid[r][c];
+        if (n === 0) continue;
+        stepCounts[n] = (stepCounts[n] || 0) + 1;
+      }
+    }
+    const partItems = Object.keys(stepCounts)
+      .map(Number)
+      .sort((a, b) => stepCounts[b] - stepCounts[a])
+      .map(n => {
+        const hex = colors[n - 1];
+        const name = colorNames[n - 1] || hex;
+        const isTrans = transFlags[n - 1];
+        const swatchStyle = isTrans
+          ? `background:${hex};opacity:0.7;background-image:linear-gradient(45deg,rgba(255,255,255,0.4) 25%,transparent 25%,transparent 50%,rgba(255,255,255,0.4) 50%,rgba(255,255,255,0.4) 75%,transparent 75%,transparent);background-size:6px 6px`
+          : `background:${hex}`;
+        return `<div class="part">
+                  <div class="stud-icon" style="${swatchStyle}"></div>
+                  <div class="part-meta"><span class="qx">${stepCounts[n]}×</span><span class="pn">#${n}</span></div>
+                </div>`;
+      }).join('');
+
+    const rowLabel = step.startRow === step.endRow
+      ? `Row ${gs - step.startRow}`
+      : `Rows ${gs - step.endRow}–${gs - step.startRow}`;
+
+    return `<section class="page">
+      <header>
+        <div class="step-num">${stepNum}</div>
+        <div class="parts-box">
+          <div class="parts-title">Parts — ${rowLabel}</div>
+          <div class="parts-grid">${partItems || '<em style="color:#999">no studs</em>'}</div>
+        </div>
+        <div class="thumb-wrap">
+          <img class="thumb" src="${thumbUrl}" alt="progress">
+          <div class="thumb-label">Progress</div>
+        </div>
+      </header>
+      <div class="main-wrap">
+        <img class="main" src="${mainUrl}" alt="step ${stepNum}">
+      </div>
+      <footer>Step ${stepNum} of ${steps.length}</footer>
+    </section>`;
+  }).join('\n');
+
+  // Cover page parts summary
+  const coverParts = colors
+    .map((hex, i) => ({hex, name: colorNames[i] || hex, n: i + 1, count: counts[i + 1] || 0, trans: transFlags[i]}))
+    .filter(r => r.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .map(r => {
+      const swatchStyle = r.trans
+        ? `background:${r.hex};opacity:0.7;background-image:linear-gradient(45deg,rgba(255,255,255,0.4) 25%,transparent 25%,transparent 50%,rgba(255,255,255,0.4) 50%,rgba(255,255,255,0.4) 75%,transparent 75%,transparent);background-size:6px 6px`
+        : `background:${r.hex}`;
+      return `<tr><td class="num">#${r.n}</td><td><span class="sw" style="${swatchStyle}"></span>${r.name}</td><td class="num">${r.count}</td></tr>`;
+    }).join('');
+
+  const css = `
+    @page { size: letter; margin: 0.5in; }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;background:#eee;}
+    .page{width:8in;height:10in;background:#fff;margin:24px auto;padding:0.4in;display:flex;flex-direction:column;page-break-after:always;position:relative;}
+    .page:last-child{page-break-after:auto;}
+    .cover{justify-content:flex-start;align-items:stretch;}
+    .cover h1{font-size:38px;font-weight:700;margin-bottom:8px;}
+    .cover .subtitle{font-size:14px;color:#666;margin-bottom:18px;}
+    .cover .cover-img{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;}
+    .cover .cover-img img{max-width:100%;max-height:5.5in;image-rendering:pixelated;border:1px solid #ccc;}
+    .cover .summary{margin-top:14px;}
+    .cover .summary h2{font-size:16px;margin-bottom:6px;}
+    .cover table{width:100%;border-collapse:collapse;font-size:11px;}
+    .cover th, .cover td{text-align:left;padding:3px 6px;border-bottom:0.5px solid #ddd;}
+    .cover .num{text-align:right;font-variant-numeric:tabular-nums;}
+    .cover .sw{display:inline-block;width:12px;height:12px;border-radius:2px;border:0.5px solid rgba(0,0,0,0.15);vertical-align:middle;margin-right:6px;}
+
+    header{display:flex;align-items:flex-start;gap:18px;margin-bottom:14px;}
+    .step-num{font-size:80px;font-weight:800;line-height:0.85;color:#1a1a1a;min-width:90px;}
+    .parts-box{flex:1;border:2px solid #1a1a1a;border-radius:8px;padding:8px 10px;background:#f5f9ff;}
+    .parts-title{font-size:11px;font-weight:600;color:#666;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:6px;}
+    .parts-grid{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;}
+    .part{display:flex;align-items:center;gap:6px;}
+    .stud-icon{width:18px;height:18px;border-radius:50%;border:0.5px solid rgba(0,0,0,0.25);box-shadow:inset 1px 1px 2px rgba(255,255,255,0.4);}
+    .part-meta{display:flex;flex-direction:column;line-height:1.1;font-size:10px;}
+    .qx{font-weight:700;font-size:13px;}
+    .pn{color:#666;font-size:9px;}
+    .thumb-wrap{text-align:center;}
+    .thumb{display:block;width:1.4in;height:1.4in;object-fit:contain;border:1px solid #1a1a1a;border-radius:4px;image-rendering:pixelated;background:#fff;}
+    .thumb-label{font-size:10px;color:#666;margin-top:2px;}
+    .main-wrap{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;}
+    .main{max-width:100%;max-height:100%;image-rendering:pixelated;border:0.5px solid #ccc;}
+    footer{font-size:10px;color:#999;text-align:center;margin-top:8px;}
+
+    .toolbar{position:sticky;top:0;background:#1a1a1a;color:#fff;padding:10px 16px;display:flex;gap:12px;align-items:center;z-index:100;}
+    .toolbar h2{font-size:14px;font-weight:500;flex:1;}
+    .toolbar button{padding:6px 14px;font-size:13px;border-radius:6px;border:none;background:#5a4fd8;color:#fff;cursor:pointer;font-weight:500;}
+    .toolbar button:hover{background:#4a3fc8;}
+    .toolbar .hint{font-size:11px;color:#aaa;}
+
+    @media print {
+      body{background:#fff;}
+      .toolbar{display:none;}
+      .page{margin:0;width:auto;height:auto;padding:0;page-break-after:always;}
+      .page:last-child{page-break-after:auto;}
+    }
+  `;
+
+  return `<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>LEGO Build Manual — ${gs}×${gs}</title>
+<style>${css}</style>
+</head><body>
+<div class="toolbar">
+  <h2>Build manual — ${gs}×${gs} · ${steps.length} steps · ${totalStuds} studs</h2>
+  <span class="hint">Use your browser's print dialog to save as PDF.</span>
+  <button onclick="window.print()">Print / Save PDF</button>
+</div>
+
+<section class="page cover">
+  <h1>LEGO Build Manual</h1>
+  <div class="subtitle">${gs} × ${gs} mosaic · ${totalStuds} studs · ${steps.length} steps · ${rowsPerStep} row${rowsPerStep === 1 ? '' : 's'} per step</div>
+  <div class="cover-img"><img src="${finalImgUrl}" alt="final"></div>
+  <div class="summary">
+    <h2>Total parts</h2>
+    <table>
+      <thead><tr><th class="num">#</th><th>Color</th><th class="num">Studs</th></tr></thead>
+      <tbody>${coverParts}</tbody>
+    </table>
+  </div>
+  <footer>Cover</footer>
+</section>
+
+${stepsHtml}
+
+</body></html>`;
 }
 
 /* ---------- Crop ---------- */
