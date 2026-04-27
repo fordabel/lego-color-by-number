@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LEGO Color-by-Number Pipeline</title>
+<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,sans-serif;background:#f5f4f0;color:#1a1a1a;min-height:100vh}
@@ -115,9 +116,9 @@ input[type=color]{width:40px;height:32px;padding:2px;border:0.5px solid rgba(0,0
   <div class="field">
     <label>Image</label>
     <div class="upload-zone" id="uploadZone">
-      <input type="file" accept="image/*" id="fileInput">
+      <input type="file" accept="image/*,.heic,.heif" id="fileInput">
       <strong>Drop image or click to upload</strong>
-      <p>PNG, JPG, GIF, WEBP supported</p>
+      <p>PNG, JPG, HEIC (iPhone), WEBP supported</p>
     </div>
     <img id="thumb" class="thumb" alt="preview">
     <button class="recrop-btn" id="recropBtn" onclick="reopenCrop()" style="display:none">Re-crop image</button>
@@ -343,19 +344,6 @@ input[type=color]{width:40px;height:32px;padding:2px;border:0.5px solid rgba(0,0
 
 <script>
 /* ---------- Palette presets ---------- */
-function ramp(from, to, n) {
-  const [r1,g1,b1] = hexToRgb(from), [r2,g2,b2] = hexToRgb(to);
-  const out = [];
-  for (let i = 0; i < n; i++) {
-    const t = i / (n - 1);
-    out.push(rgbToHex(
-      Math.round(r1 + (r2 - r1) * t),
-      Math.round(g1 + (g2 - g1) * t),
-      Math.round(b1 + (b2 - b1) * t)
-    ));
-  }
-  return out;
-}
 function hexToRgb(hex) {
   const h = hex.replace('#','');
   return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
@@ -363,7 +351,6 @@ function hexToRgb(hex) {
 function rgbToHex(r,g,b) {
   return '#' + [r,g,b].map(x=>Math.max(0,Math.min(255,x|0)).toString(16).padStart(2,'0')).join('').toUpperCase();
 }
-function namedHexes(arr) { return arr.map(h => ({hex: h, name: h})); }
 
 const LEGO20 = [
   {hex:'#FFFFFF', name:'White'},
@@ -467,25 +454,39 @@ const LEGO_STORE64 = [
   {hex:'#C80000', name:'64 Trans Red',         trans:true},
 ];
 
+// Pick LEGO_STORE64 entries by their 1-based catalog number.
+// Returns fresh {hex, name} objects (without the leading "NN " prefix).
+function pick64(...nums) {
+  return nums.map(n => {
+    const c = LEGO_STORE64[n - 1];
+    return {hex: c.hex, name: c.name.replace(/^\d+\s+/, ''), trans: !!c.trans};
+  });
+}
+
+// All "filter" presets are curated subsets of LEGO_STORE64 — only Pick-A-Brick colors.
 const PALETTES = {
-  lego20:    {label:'LEGO 20',                  group:'LEGO',     colors: LEGO20},
-  lego8:     {label:'LEGO Basic 8',             group:'LEGO',     colors: LEGO_BASIC},
-  lego_store64:{label:'LEGO Pick-A-Brick (64)', group:'LEGO',     colors: LEGO_STORE64},
-  standard:  {label:'Standard 16',     group:'Standard', colors: namedHexes(['#FFFFFF','#C0C0C0','#808080','#000000','#8B4513','#8B0000','#FF0000','#FF8C00','#FFD700','#228B22','#00FF00','#87CEEB','#00CED1','#4169E1','#8A2BE2','#FF1493'])},
-  crayola:   {label:'Crayola 16',      group:'Standard', colors: namedHexes(['#EE4B2B','#FF7F00','#FFD700','#00A550','#0047AB','#8B008B','#FF69B4','#A52A2A','#000000','#FFFFFF','#808080','#C0C0C0','#8B4513','#FF8C00','#40E0D0','#98FB98'])},
-  warm:      {label:'Warm tones',      group:'Mood',     colors: namedHexes(['#FF2400','#FF6600','#FF8C00','#FFA500','#FFD700','#FFEC8B','#FFDAB9','#E9967A','#CD5C5C','#B22222','#8B0000','#FF69B4','#FF1493','#C71585','#4B0000','#FFFFFF'])},
-  cool:      {label:'Cool tones',      group:'Mood',     colors: namedHexes(['#000080','#0000CD','#4169E1','#1E90FF','#00BFFF','#87CEEB','#B0E0E6','#00CED1','#008B8B','#006400','#228B22','#32CD32','#98FB98','#8A2BE2','#9400D3','#FFFFFF'])},
-  earth:     {label:'Earth tones',     group:'Mood',     colors: namedHexes(['#8B4513','#A0522D','#CD853F','#D2691E','#DEB887','#F4A460','#FAEBD7','#556B2F','#6B8E23','#808000','#8FBC8F','#2E8B57','#696969','#808080','#A9A9A9','#FFFFFF'])},
-  pastel:    {label:'Pastels',         group:'Mood',     colors: namedHexes(['#FFB3BA','#FFDFBA','#FFFFBA','#BAFFC9','#BAE1FF','#D4BAFF','#FFB3E6','#C9FFE5','#C9D6FF','#FFD9B3','#B3FFD9','#D9B3FF','#FFC8B3','#B3FFFD','#F7C8E0','#FFFFFF'])},
-  starwars:  {label:'Star Wars',       group:'Mood',     colors: namedHexes(['#1A1A1A','#4A4A4A','#888888','#C8C8C8','#FFFFFF','#8B0000','#CC0000','#FF4500','#FF8C00','#C09000','#1A3A6A','#2E75B6','#87CEEB','#2D5A27','#4CAF50','#B5651D'])},
-  neon:      {label:'Neon / retro',    group:'Mood',     colors: namedHexes(['#000000','#FFFFFF','#FF14F0','#00FFE5','#FFEE00','#39FF14','#FF0080','#FF6E27','#7DF9FF','#9B30FF'])},
-  mono_bw:   {label:'Mono — B&W ramp', group:'Mono',     colors: namedHexes(ramp('#000000','#FFFFFF', 10))},
-  mono_sepia:{label:'Mono — Sepia',    group:'Mono',     colors: namedHexes(ramp('#1F0F08','#F8E8C8', 8))},
-  mono_blue: {label:'Mono — Blue',     group:'Mono',     colors: namedHexes(ramp('#031634','#E1F0FF', 8))},
-  halftone:  {label:'B&W halftone',    group:'Mono',     colors: [{hex:'#FFFFFF',name:'White'},{hex:'#000000',name:'Black'}]},
-  duo_bw:    {label:'Duo — B&W',       group:'Duo',      colors: [{hex:'#FFFFFF',name:'White'},{hex:'#000000',name:'Black'}]},
-  duo_redblk:{label:'Duo — Red/Black', group:'Duo',      colors: [{hex:'#FFFFFF',name:'White'},{hex:'#C91A09',name:'Red'},{hex:'#05131D',name:'Black'}]},
-  duo_blyel: {label:'Duo — Blue/Yel',  group:'Duo',      colors: [{hex:'#FFFFFF',name:'White'},{hex:'#0055BF',name:'Blue'},{hex:'#F2CD37',name:'Yellow'}]},
+  lego20:    {label:'LEGO 20',                  group:'LEGO',  colors: LEGO20},
+  lego8:     {label:'LEGO Basic 8',             group:'LEGO',  colors: LEGO_BASIC},
+  lego_store64:{label:'LEGO Pick-A-Brick (64)', group:'LEGO',  colors: LEGO_STORE64},
+
+  // Mood — perceptual ramps drawn only from LEGO 64
+  warm:    {label:'Warm tones',  group:'Mood', colors: pick64(28,5,21,47,11,9,44,52,31,53,27,26,14,22,6,1)},
+  cool:    {label:'Cool tones',  group:'Mood', colors: pick64(1,39,25,51,37,36,10,4,17,15,12,20,50,18,41,6)},
+  earth:   {label:'Earth tones', group:'Mood', colors: pick64(33,22,34,3,2,16,43,20,50,18,7,49,24,23,54,1)},
+  pastel:  {label:'Pastels',     group:'Mood', colors: pick64(1,45,30,28,39,25,41,40,27,47,44,48)},
+  starwars:{label:'Star Wars',   group:'Mood', colors: pick64(6,49,19,24,23,35,1,31,53,17,4,25,15,7,18,22)},
+  neon:    {label:'Neon / retro',group:'Mood', colors: pick64(6,1,14,12,42,13,8,27,26,29,46,44,21)},
+
+  // Mono — single-hue ramps from LEGO 64
+  mono_bw:   {label:'Mono — B&W ramp', group:'Mono', colors: pick64(1,23,35,24,19,49,6)},
+  mono_sepia:{label:'Mono — Sepia',    group:'Mono', colors: pick64(45,30,2,3,34,16,22,33)},
+  mono_blue: {label:'Mono — Blue',     group:'Mono', colors: pick64(1,25,37,10,4,17,6)},
+  halftone:  {label:'B&W halftone',    group:'Mono', colors: pick64(1,6)},
+
+  // Duo / tri — minimal LEGO 64 selections
+  duo_bw:    {label:'Duo — B&W',       group:'Duo',  colors: pick64(1,6)},
+  duo_redblk:{label:'Duo — Red/Black', group:'Duo',  colors: pick64(1,31,6)},
+  duo_blyel: {label:'Duo — Blue/Yel',  group:'Duo',  colors: pick64(1,4,5)},
 };
 
 /* ---------- State ---------- */
@@ -515,7 +516,7 @@ function buildPresetSelect() {
     if (!groups[p.group]) groups[p.group] = [];
     groups[p.group].push({key, label: p.label});
   });
-  const order = ['LEGO','Standard','Mood','Mono','Duo'];
+  const order = ['LEGO','Mood','Mono','Duo'];
   order.forEach(g => {
     if (!groups[g]) return;
     const og = document.createElement('optgroup');
@@ -594,8 +595,26 @@ zone.addEventListener('drop', e => {
   loadImageFile(f);
 });
 
-function loadImageFile(f) {
-  const url = URL.createObjectURL(f);
+async function loadImageFile(f) {
+  const isHeic = /\.(heic|heif)$/i.test(f.name) ||
+                 f.type === 'image/heic' || f.type === 'image/heif';
+  let blob = f;
+  if (isHeic) {
+    if (typeof heic2any !== 'function') {
+      setStatus('HEIC support did not load — check connection and refresh.');
+      return;
+    }
+    setStatus('Converting HEIC…');
+    try {
+      blob = await heic2any({blob: f, toType: 'image/jpeg', quality: 0.92});
+    } catch (e) {
+      console.error(e);
+      setStatus('HEIC conversion failed: ' + (e.message || e));
+      return;
+    }
+    setStatus('');
+  }
+  const url = URL.createObjectURL(blob);
   const img = new Image();
   img.onload = () => {
     originalImg = img;
@@ -603,6 +622,7 @@ function loadImageFile(f) {
     showThumb(url);
     openCropModal(img);
   };
+  img.onerror = () => setStatus('Could not decode this image.');
   img.src = url;
 }
 
@@ -1871,7 +1891,7 @@ function reopenCrop() {
   document.addEventListener('pointerup', () => { dragging = null; });
 })();
 
-loadPreset('lego20');
+loadPreset('lego_store64');
 </script>
 </body>
 </html>
